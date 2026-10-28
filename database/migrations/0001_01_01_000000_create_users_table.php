@@ -17,6 +17,10 @@ return new class extends Migration
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
+            $table->string('phone')->nullable();
+            $table->string('whatsapp')->nullable();
+            $table->enum('role', ['admin', 'sa', 'teknisi', 'customer'])->default('customer')->index();
+            $table->unsignedBigInteger('ecommerce_user_id')->nullable()->index();
             $table->rememberToken();
             $table->timestamps();
         });
