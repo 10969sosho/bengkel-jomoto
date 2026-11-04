@@ -1,6 +1,8 @@
 @extends('layouts.app')
 
 @section('title', 'Admin Dashboard')
+@section('page_title', 'Admin / Supervisor')
+@section('page_icon', 'shield-check')
 
 @section('content')
 <div class="mb-5">
@@ -9,29 +11,41 @@
 </div>
 
 <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-    @php($cards = [
-        ['Total WO', $stats['orders'], 'text-slate-900'],
-        ['WO Aktif', $stats['active'], 'text-indigo-600'],
-        ['Pendapatan', 'Rp '.number_format($stats['revenue']), 'text-emerald-600'],
-        ['Belum Dibayar', 'Rp '.number_format($stats['unpaid']), 'text-red-500'],
-        ['Teknisi', $stats['technicians'], 'text-sky-600'],
-        ['Customer', $stats['customers'], 'text-amber-600'],
-    ])
-    @foreach($cards as [$label, $value, $color])
-        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div class="text-[11px] font-medium uppercase tracking-wide text-slate-400">{{ $label }}</div>
-            <div class="mt-1 truncate text-lg font-bold {{ $color }}">{{ $value }}</div>
+    @php
+        $cards = [
+            ['Total WO', $stats['orders'], 'text-slate-900', 'bg-slate-100', 'clipboard-list'],
+            ['WO Aktif', $stats['active'], 'text-indigo-600', 'bg-indigo-50', 'activity'],
+            ['Pendapatan', 'Rp '.number_format($stats['revenue']), 'text-lime-600', 'bg-lime-50', 'wallet-cards'],
+            ['Belum Dibayar', 'Rp '.number_format($stats['unpaid']), 'text-red-500', 'bg-red-50', 'circle-dollar-sign'],
+            ['Teknisi', $stats['technicians'], 'text-sky-600', 'bg-sky-50', 'hard-hat'],
+            ['Customer', $stats['customers'], 'text-amber-600', 'bg-amber-50', 'users'],
+        ];
+    @endphp
+    @foreach($cards as [$label, $value, $color, $bg, $icon])
+        <div class="rounded-3xl border border-slate-200/80 bg-white p-4 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:shadow-md">
+            <span class="grid h-9 w-9 place-items-center rounded-xl {{ $bg }} {{ $color }}">
+                <i data-lucide="{{ $icon }}" class="h-[18px] w-[18px]"></i>
+            </span>
+            <div class="mt-3 truncate text-lg font-extrabold {{ $color }}">{{ $value }}</div>
+            <div class="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{{ $label }}</div>
         </div>
     @endforeach
 </div>
 
 <div class="grid gap-5 lg:grid-cols-3">
-    <div class="lg:col-span-2 space-y-5">
-        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div class="border-b border-slate-100 px-5 py-4 font-semibold text-slate-900">Work Order Terbaru</div>
+    <div class="space-y-5 lg:col-span-2">
+        <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+            <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                <h2 class="flex items-center gap-2 font-bold text-slate-900">
+                    <span class="grid h-7 w-7 place-items-center rounded-lg bg-lime-300 text-black">
+                        <i data-lucide="list-ordered" class="h-4 w-4"></i>
+                    </span>
+                    Work Order Terbaru
+                </h2>
+            </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                    <thead class="bg-slate-50/80 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
                         <tr>
                             <th class="px-4 py-2.5">WO</th>
                             <th class="px-4 py-2.5">Customer</th>
@@ -42,8 +56,8 @@
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         @foreach($recentOrders as $order)
-                            <tr>
-                                <td class="px-4 py-2.5 font-semibold text-indigo-700">{{ $order->wo_number }}</td>
+                            <tr class="transition hover:bg-slate-50/70">
+                                <td class="px-4 py-2.5 font-mono text-sm font-bold text-slate-900">{{ $order->wo_number }}</td>
                                 <td class="px-4 py-2.5 text-slate-600">
                                     {{ $order->customer?->name }}
                                     <span class="block text-xs text-slate-400">{{ $order->vehicle?->plate_number }}</span>
@@ -67,8 +81,13 @@
         </div>
 
         <div class="grid gap-5 sm:grid-cols-2">
-            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div class="border-b border-slate-100 px-5 py-4 font-semibold text-slate-900">Pricelist Servis</div>
+            <div id="pricelist" class="scroll-mt-28 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+                <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-4 font-bold text-slate-900">
+                    <span class="grid h-7 w-7 place-items-center rounded-lg bg-lime-300 text-black">
+                        <i data-lucide="tags" class="h-4 w-4"></i>
+                    </span>
+                    Pricelist Servis
+                </div>
                 <div class="max-h-80 overflow-y-auto">
                     <table class="w-full text-sm">
                         <tbody class="divide-y divide-slate-100">
@@ -78,7 +97,7 @@
                                         {{ $p->service_name }}
                                         <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">{{ $p->categoryLabel() }}</span>
                                     </td>
-                                    <td class="px-4 py-2.5 text-right font-semibold text-slate-700">Rp {{ number_format($p->price) }}</td>
+                                    <td class="px-4 py-2.5 text-right font-bold text-slate-700">Rp {{ number_format($p->price) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -86,8 +105,13 @@
                 </div>
             </div>
 
-            <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div class="border-b border-slate-100 px-5 py-4 font-semibold text-slate-900">Katalog Sub-Material</div>
+            <div class="scroll-mt-28 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
+                <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-4 font-bold text-slate-900">
+                    <span class="grid h-7 w-7 place-items-center rounded-lg bg-lime-300 text-black">
+                        <i data-lucide="package-open" class="h-4 w-4"></i>
+                    </span>
+                    Katalog Sub-Material
+                </div>
                 <div class="max-h-80 overflow-y-auto">
                     <table class="w-full text-sm">
                         <tbody class="divide-y divide-slate-100">
@@ -97,7 +121,7 @@
                                         {{ $s->name }}
                                         <span class="block text-xs text-slate-400">{{ $s->description }}</span>
                                     </td>
-                                    <td class="px-4 py-2.5 text-right font-semibold text-slate-700">Rp {{ number_format($s->default_price) }}</td>
+                                    <td class="px-4 py-2.5 text-right font-bold text-slate-700">Rp {{ number_format($s->default_price) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -108,26 +132,40 @@
     </div>
 
     <div class="space-y-5">
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h2 class="mb-3 font-semibold text-slate-900">Performa Teknisi</h2>
+        <div id="performa" class="scroll-mt-28 rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <h2 class="mb-3 flex items-center gap-2 font-bold text-slate-900">
+                <span class="grid h-7 w-7 place-items-center rounded-lg bg-lime-300 text-black">
+                    <i data-lucide="chart-no-axes-column-increasing" class="h-4 w-4"></i>
+                </span>
+                Performa Teknisi
+            </h2>
             <div class="space-y-3">
-                @foreach($technicians as $tech)
-                    <div class="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2.5">
-                        <div>
-                            <div class="text-sm font-semibold text-slate-800">{{ $tech->name }}</div>
-                            <div class="text-xs text-slate-400">{{ $tech->email }}</div>
+                @forelse($technicians as $tech)
+                    <div class="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-3.5 py-3 transition hover:border-slate-200 hover:bg-white hover:shadow-sm">
+                        <div class="flex min-w-0 items-center gap-3">
+                            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-900 text-xs font-black text-lime-300">
+                                {{ strtoupper(substr(preg_replace('/[^A-Za-z]/', '', $tech->name), 0, 1)) }}
+                            </span>
+                            <div class="min-w-0">
+                                <div class="truncate text-sm font-semibold text-slate-800">{{ $tech->name }}</div>
+                                <div class="truncate text-xs text-slate-400">{{ $tech->email }}</div>
+                            </div>
                         </div>
-                        <span class="rounded-full bg-white px-3 py-1 text-sm font-bold text-indigo-600 shadow-sm">
+                        <span class="shrink-0 rounded-full bg-white px-3 py-1 text-sm font-bold text-slate-900 shadow-sm ring-1 ring-slate-100">
                             {{ $tech->technician_orders_count }} WO
                         </span>
                     </div>
-                @endforeach
+                @empty
+                    <p class="text-sm text-slate-400">Belum ada teknisi terdaftar.</p>
+                @endforelse
             </div>
         </div>
 
-        <div class="rounded-2xl border border-indigo-100 bg-indigo-50 p-5">
-            <h2 class="font-semibold text-indigo-900">Master Data</h2>
-            <p class="mt-1 text-sm text-indigo-700">
+        <div class="rounded-3xl border border-lime-200 bg-lime-50 p-5">
+            <h2 class="flex items-center gap-2 font-bold text-lime-900">
+                <i data-lucide="database" class="h-4 w-4"></i> Master Data
+            </h2>
+            <p class="mt-1.5 text-sm text-lime-800">
                 Pricelist servis, katalog sub-material, dan data teknisi dikelola oleh Admin.
                 Modul lengkap (CRUD + laporan) masuk Milestone berikutnya.
             </p>
