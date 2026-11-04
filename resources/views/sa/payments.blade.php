@@ -108,8 +108,9 @@ document.querySelectorAll('[data-payment-form]').forEach(form => {
                 input.disabled = !active;
                 input.required = active && input.name !== 'payment_reference' ? true : (active && input.name === 'payment_reference' && method.value === 'transfer');
             });
-            if (method.value === 'qris') {
-                panel.querySelector('[name="payment_reference"]').disabled = false;
+            const refInput = panel.querySelector('[name="payment_reference"]');
+            if (refInput && method.value === 'qris') {
+                refInput.disabled = false;
             }
         });
     };
