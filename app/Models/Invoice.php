@@ -51,6 +51,8 @@ class Invoice extends Model
             }
         }
 
+        $totals['service'] += $order->visit_fee;
+
         $subtotal = array_sum($totals);
         $tax = (int) round(($subtotal - $discount) * self::TAX_RATE);
 

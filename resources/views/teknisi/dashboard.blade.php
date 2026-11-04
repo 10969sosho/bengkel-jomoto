@@ -37,8 +37,8 @@
 <div class="space-y-4">
     @forelse($orders as $order)
         @php
-            $closed = (int) $order->workLogs()->whereNotNull('stopped_at')->sum('duration_seconds');
-            $open = $order->workLogs()->whereNull('stopped_at')->latest('id')->first();
+            $closed = (int) $order->workLogs->whereNotNull('stopped_at')->sum('duration_seconds');
+            $open = $order->workLogs->whereNull('stopped_at')->sortByDesc('id')->first();
         @endphp
         <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm transition duration-300 hover:shadow-md
             {{ $order->status === 'working' ? 'ring-2 ring-lime-300/60' : '' }}">
@@ -53,12 +53,31 @@
                                 <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-lime-400"></span> TIMER BERJALAN
                             </span>
                         @endif
+                        @if($order->location_type === 'offsite')
+                            <span class="rounded-full bg-lime-300 px-2.5 py-1 text-xs font-black tracking-wide text-slate-950">HOME SERVICE</span>
+                        @endif
                     </div>
                     <div class="mt-1.5 text-sm text-slate-600">
                         {{ $order->customer?->name }} · <b>{{ $order->vehicle?->fullName() }}</b> ({{ $order->vehicle?->plate_number }})
                     </div>
                     <p class="mt-1 max-w-xl text-sm text-slate-500">“{{ $order->customer_complaint }}”</p>
                 </div>
+
+                @if($order->location_type === 'offsite')
+                    <div class="mt-3 rounded-2xl border border-lime-200 bg-lime-50 p-3 text-sm">
+                        <div class="font-bold text-lime-900">{{ $order->offsite_address }}</div>
+                        @if($order->location_notes)<div class="mt-0.5 text-xs text-lime-800">Patokan: {{ $order->location_notes }}</div>@endif
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            @if($order->customer?->whatsappNumber())
+                                <a href="https://wa.me/{{ $order->customer->whatsappNumber() }}" target="_blank" rel="noopener" class="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white">WhatsApp Customer</a>
+                            @else
+                                <span class="rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-500">WhatsApp belum tersedia</span>
+                            @endif
+                            <a href="https://www.google.com/maps/search/?api=1&amp;query={{ urlencode($order->offsite_address ?? '') }}" target="_blank" rel="noopener"
+                               class="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">Buka Google Maps</a>
+                        </div>
+                    </div>
+                @endif
 
                 <div class="rounded-2xl bg-slate-900 px-4 py-3 text-right">
                     <div class="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Total Waktu</div>
@@ -127,9 +146,17 @@
                                    class="w-full rounded-xl border-slate-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-lime-400 focus:ring-2 focus:ring-lime-200">
                         </div>
                     </div>
-                    <button class="mt-3 rounded-xl bg-lime-300 px-5 py-2.5 text-sm font-bold text-black transition hover:bg-lime-400 active:scale-[.98]">
-                        Konfirmasi Selesai &amp; Stop Timer
-                    </button>
+                    @if($order->location_type === 'offsite')
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button name="payment_method" value="" class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700">Selesai Tanpa Pembayaran</button>
+                            <button name="payment_method" value="qris" class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-lime-300">Selesai &amp; Terima QRIS</button>
+                            <button name="payment_method" value="cash" class="rounded-xl bg-lime-300 px-4 py-2.5 text-sm font-bold text-black">Selesai &amp; Terima Cash</button>
+                        </div>
+                    @else
+                        <button class="mt-3 rounded-xl bg-lime-300 px-5 py-2.5 text-sm font-bold text-black transition hover:bg-lime-400 active:scale-[.98]">
+                            Konfirmasi Selesai &amp; Stop Timer
+                        </button>
+                    @endif
                 </form>
             @endif
         </div>

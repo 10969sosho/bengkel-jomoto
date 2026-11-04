@@ -17,6 +17,7 @@ Route::middleware('role:sa')->prefix('sa')->name('sa.')->group(function () {
     Route::get('/', [SaController::class, 'index'])->name('index');
     Route::get('/wo/create', [SaController::class, 'create'])->name('create');
     Route::post('/wo', [SaController::class, 'store'])->name('store');
+    Route::post('/customers/{customer}/vehicles', [SaController::class, 'storeVehicle'])->name('vehicles.store');
     Route::get('/wo/{serviceOrder}', [SaController::class, 'show'])->name('show');
     Route::post('/wo/{serviceOrder}/assign', [SaController::class, 'assign'])->name('assign');
     Route::post('/wo/{serviceOrder}/estimate', [SaController::class, 'estimate'])->name('estimate');
@@ -35,10 +36,16 @@ Route::middleware('role:teknisi')->prefix('teknisi')->name('teknisi.')->group(fu
 
 Route::middleware('role:customer')->prefix('customer')->name('customer.')->group(function () {
     Route::get('/', [CustomerController::class, 'index'])->name('index');
+    Route::post('/vehicles', [CustomerController::class, 'storeVehicle'])->name('vehicles.store');
+    Route::post('/service-orders', [CustomerController::class, 'storeOrder'])->name('orders.store');
 });
 
 Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('index');
+    Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
 });
+
+Route::get('/api-docs', fn () => view('api-docs'))
+    ->middleware('role:admin,sa')->name('api-docs');
 
 Route::get('/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');

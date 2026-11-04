@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Invoice;
 use App\Models\ServiceOrder;
 use App\Models\WorkLog;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class TeknisiController extends Controller
@@ -60,6 +62,10 @@ class TeknisiController extends Controller
             'status.*' => ['nullable', 'in:ok,attention,broken'],
             'findings' => ['nullable', 'string', 'max:3000'],
             'recommendations' => ['nullable', 'string', 'max:3000'],
+            'before_photos' => ['nullable', 'array', 'max:5'],
+            'before_photos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'after_photos' => ['nullable', 'array', 'max:5'],
+            'after_photos.*' => ['image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
         $checklist = [];
@@ -71,6 +77,17 @@ class TeknisiController extends Controller
             ];
         }
 
+        $inspection = $serviceOrder->inspection;
+        $beforePhotos = $inspection?->before_photos ?? [];
+        $afterPhotos = $inspection?->after_photos ?? [];
+
+        foreach ($data['before_photos'] ?? [] as $photo) {
+            $beforePhotos[] = $photo->store('inspections', 'public');
+        }
+        foreach ($data['after_photos'] ?? [] as $photo) {
+            $afterPhotos[] = $photo->store('inspections', 'public');
+        }
+
         $serviceOrder->inspection()->updateOrCreate(
             ['service_order_id' => $serviceOrder->id],
             [
@@ -78,6 +95,8 @@ class TeknisiController extends Controller
                 'checklist' => $checklist,
                 'findings' => $data['findings'] ?? null,
                 'recommendations' => $data['recommendations'] ?? null,
+                'before_photos' => array_slice($beforePhotos, -10),
+                'after_photos' => array_slice($afterPhotos, -10),
             ],
         );
 
@@ -131,28 +150,46 @@ class TeknisiController extends Controller
         $data = $request->validate([
             'notes' => ['nullable', 'string', 'max:2000'],
             'odometer' => ['nullable', 'integer', 'min:0'],
+            'payment_method' => ['nullable', 'in:qris,cash'],
         ]);
 
-        $openLog = $serviceOrder->workLogs()->whereNull('stopped_at')->latest('id')->first();
-        if ($openLog) {
-            $openLog->update([
-                'stopped_at' => now(),
-                'duration_seconds' => $openLog->started_at->diffInSeconds(now()),
-                'notes' => $data['notes'] ?? $openLog->notes,
+        if (! empty($data['payment_method']) && $serviceOrder->location_type !== 'offsite') {
+            return back()->with('error', 'Pembayaran langsung hanya tersedia untuk Home Service.');
+        }
+
+        DB::transaction(function () use ($data, $serviceOrder): void {
+            $openLog = $serviceOrder->workLogs()->whereNull('stopped_at')->latest('id')->first();
+            if ($openLog) {
+                $openLog->update([
+                    'stopped_at' => now(),
+                    'duration_seconds' => $openLog->started_at->diffInSeconds(now()),
+                    'notes' => $data['notes'] ?? $openLog->notes,
+                ]);
+            }
+
+            $serviceOrder->update([
+                'status' => 'completed',
+                'actual_completion' => now(),
             ]);
-        }
 
-        $serviceOrder->update([
-            'status' => 'completed',
-            'actual_completion' => now(),
-        ]);
+            if (! empty($data['odometer'])) {
+                $serviceOrder->vehicle->update(['last_odometer' => $data['odometer']]);
+            }
 
-        if (! empty($data['odometer'])) {
-            $serviceOrder->vehicle->update(['last_odometer' => $data['odometer']]);
-        }
+            if (! empty($data['payment_method'])) {
+                $serviceOrder->loadMissing('items');
+                $invoice = $serviceOrder->invoice ?? Invoice::createFromOrder($serviceOrder);
+                $invoice->markPaid($data['payment_method']);
+                $serviceOrder->update(['status' => 'invoiced']);
+            }
+        });
+
+        $message = ! empty($data['payment_method'])
+            ? "{$serviceOrder->wo_number} selesai dan pembayaran {$data['payment_method']} tercatat."
+            : "{$serviceOrder->wo_number} ditandai selesai. Menunggu SA menerbitkan invoice.";
 
         return redirect()->route('teknisi.index')
-            ->with('success', "{$serviceOrder->wo_number} ditandai selesai. Menunggu SA menerbitkan invoice.");
+            ->with('success', $message);
     }
 
     private function guard(ServiceOrder $order): void

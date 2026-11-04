@@ -62,6 +62,7 @@
             ]],
             ['label' => 'LAYANAN & ESTIMASI', 'items' => [
                 ['text' => 'Buat WO Baru', 'route' => 'sa.create', 'icon' => 'file-plus-2'],
+                ['text' => 'Dokumentasi API', 'route' => 'api-docs', 'icon' => 'braces'],
             ]],
         ],
         'teknisi' => [
@@ -82,6 +83,8 @@
             ['label' => 'MASTER & CUSTOMER', 'items' => [
                 ['text' => 'Pricelist & Sub-Material', 'route' => 'admin.index', 'anchor' => 'pricelist', 'icon' => 'tags'],
                 ['text' => 'Performa Teknisi', 'route' => 'admin.index', 'anchor' => 'performa', 'icon' => 'chart-no-axes-column-increasing'],
+                ['text' => 'Laporan Pendapatan', 'route' => 'admin.reports', 'icon' => 'chart-no-axes-combined'],
+                ['text' => 'Dokumentasi API', 'route' => 'api-docs', 'icon' => 'braces'],
             ]],
         ],
     ];
@@ -255,7 +258,7 @@
         </div>
 
         <div class="border-t border-slate-100 bg-lime-50/60 px-4 py-1.5 text-center text-[11px] font-semibold text-lime-700 sm:px-6">
-            Demo Mode — gunakan Switch Role di kanan atas untuk pindah role (SA · Teknisi · Customer · Admin) tanpa login.
+        Demo Mode — gunakan Switch Role di kanan atas untuk pindah role (SA · Teknisi · Customer · Admin) tanpa login.
         </div>
     </header>
 
@@ -285,7 +288,7 @@
     </main>
 
     <footer class="px-6 pb-6 pt-2 text-center text-xs text-slate-400">
-        Program Bengkel Jomoto · Phase 1 Core MVP · Laravel + Blade + Tailwind
+        Program Bengkel Jomoto · ERP-ready workshop platform · Laravel + Blade
     </footer>
 </div>
 

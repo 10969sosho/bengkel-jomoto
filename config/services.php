@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'jomoto_api' => [
+        'key' => env('API_KEY'),
+        'demo_key' => env('API_DEMO_KEY', 'demo-erp-jomoto-token'),
+    ],
+
 ];

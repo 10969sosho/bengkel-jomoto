@@ -6,11 +6,13 @@ use App\Models\Inspection;
 use App\Models\Invoice;
 use App\Models\ServiceOrder;
 use App\Models\ServicePricelist;
+use App\Models\Sparepart;
 use App\Models\SubMaterialCatalog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\WorkLog;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 
 class DatabaseSeeder extends Seeder
 {
@@ -80,6 +82,17 @@ class DatabaseSeeder extends Seeder
             'email_verified_at' => now(),
         ]);
 
+        $citra = User::create([
+            'name' => 'Citra Permata',
+            'email' => 'citra@gmail.com',
+            'password' => $password,
+            'phone' => '0813-5555-8822',
+            'whatsapp' => '6281355558822',
+            'role' => 'customer',
+            'ecommerce_user_id' => 1003,
+            'email_verified_at' => now(),
+        ]);
+
         // ── Master: Pricelist Servis ──
         $pricelist = [
             ['Servis Berkala Ringan', 'reguler', 85000],
@@ -125,6 +138,24 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
+        foreach ([
+            ['OLI-MPX2-1L', 'Oli Mesin MPX 2 1L', 'Honda', 'Beat / Vario', 78000, 24, 5001],
+            ['PAD-HON-125', 'Kampas Rem Depan Honda', 'Honda', 'Beat / Vario', 85000, 11, 5002],
+            ['BELT-VAR-160', 'V-Belt Vario 160', 'Honda', 'Vario 160', 145000, 7, 5003],
+            ['ROLLER-GS-G1', 'Roller Set Gesits G1', 'Gesits', 'G1', 185000, 5, 5004],
+        ] as [$sku, $name, $brand, $model, $price, $stock, $ecommerceProductId]) {
+            Sparepart::create([
+                'sku' => $sku,
+                'name' => $name,
+                'brand' => $brand,
+                'model' => $model,
+                'price' => $price,
+                'stock' => $stock,
+                'ecommerce_product_id' => $ecommerceProductId,
+                'is_active' => true,
+            ]);
+        }
+
         // ── Master: Kendaraan ──
         $gesits = Vehicle::create([
             'user_id' => $hendra->id,
@@ -160,6 +191,18 @@ class DatabaseSeeder extends Seeder
             'chassis_number' => 'MH1ACV230PK10992',
             'fuel_type' => 'electric',
             'last_odometer' => 11230,
+        ]);
+
+        $beat = Vehicle::create([
+            'user_id' => $citra->id,
+            'plate_number' => 'L 4192 CP',
+            'brand' => 'Honda',
+            'model' => 'Beat Street',
+            'year' => 2024,
+            'engine_number' => 'JFP1E-2441-23981',
+            'chassis_number' => 'MH1JFP112RK23981',
+            'fuel_type' => 'gasoline',
+            'last_odometer' => 4200,
         ]);
 
         // ── Service Order 1: Antrian baru (draft) ──
@@ -339,6 +382,72 @@ class DatabaseSeeder extends Seeder
         $invoice->markPaid('qris');
         $wo5->update(['status' => 'invoiced']);
 
+        Storage::disk('public')->put('inspections/demo-before.svg', $this->demoPhoto('Sebelum Perbaikan', '#f59e0b'));
+        Storage::disk('public')->put('inspections/demo-after.svg', $this->demoPhoto('Sesudah Perbaikan', '#84cc16'));
+
+        $homeOrder = ServiceOrder::create([
+            'wo_number' => ServiceOrder::generateWoNumber(),
+            'customer_id' => $citra->id,
+            'vehicle_id' => $beat->id,
+            'sa_id' => $sa->id,
+            'technician_id' => $budi->id,
+            'customer_complaint' => 'Servis berkala 4.000 KM, suara rem depan mulai berdecit.',
+            'sa_diagnosis' => 'Klaim servis gratis ATPM. Kampas rem depan perlu diganti; teknisi datang ke rumah.',
+            'service_type' => 'free_atpm',
+            'coupon_milestone' => 4000,
+            'odometer' => 4200,
+            'location_type' => 'offsite',
+            'offsite_address' => 'Jl. Pucang Anom Timur No. 18, Surabaya',
+            'location_notes' => 'Rumah pagar hitam di samping minimarket',
+            'visit_fee' => 50000,
+            'status' => 'invoiced',
+            'actual_completion' => now()->subHours(4),
+            'created_at' => now()->subHours(8),
+            'updated_at' => now()->subHours(4),
+        ]);
+        $this->addItems($homeOrder, [
+            ['service', 'Servis Berkala 4.000 KM (ATPM)', 1, 150000, true, 'Jasa gratis kupon ATPM 4.000 KM'],
+            ['sparepart', 'Oli Mesin — Kupon ATPM', 1, 78000, true, 'Oli gratis ATPM 4.000 KM'],
+            ['sparepart', 'Sparepart Dasar — Kupon ATPM', 1, 25000, true, 'Sparepart dasar gratis ATPM 4.000 KM'],
+            ['sparepart', 'Kampas Rem Depan Honda (HET)', 1, 85000, false, null],
+        ]);
+        Inspection::create([
+            'service_order_id' => $homeOrder->id,
+            'technician_id' => $budi->id,
+            'checklist' => $this->checklist(['rem_depan' => 'attention', 'oli' => 'attention']),
+            'findings' => 'Oli mencapai jadwal penggantian, kampas rem depan mulai menipis.',
+            'recommendations' => 'Penggantian oli ditanggung kupon ATPM; kampas rem disetujui customer.',
+            'before_photos' => ['inspections/demo-before.svg'],
+            'after_photos' => ['inspections/demo-after.svg'],
+        ]);
+        $homeInvoice = Invoice::createFromOrder($homeOrder);
+        $homeInvoice->markPaid('cash');
+
+        $transferOrder = ServiceOrder::create([
+            'wo_number' => ServiceOrder::generateWoNumber(),
+            'customer_id' => $siti->id,
+            'vehicle_id' => $alva->id,
+            'sa_id' => $sa->id,
+            'technician_id' => $agus->id,
+            'customer_complaint' => 'Servis berkala 10.000 KM dan pemeriksaan baterai.',
+            'sa_diagnosis' => 'Jasa berkala gratis Jomoto; filter dan cairan perawatan dibayar.',
+            'service_type' => 'free_jomoto',
+            'coupon_milestone' => 10000,
+            'odometer' => 11230,
+            'location_type' => 'onsite',
+            'status' => 'invoiced',
+            'actual_completion' => now()->subDays(3),
+            'created_at' => now()->subDays(3)->subHours(3),
+            'updated_at' => now()->subDays(3),
+        ]);
+        $this->addItems($transferOrder, [
+            ['service', 'Servis Berkala 10.000 KM (Jomoto)', 1, 150000, true, 'Jasa gratis kupon Jomoto 10.000 KM'],
+            ['sparepart', 'Filter Udara Alva Cervo (HET)', 1, 95000, false, null],
+            ['sub_material', 'Pembersihan & Kalibrasi Throttle Body', 1, 45000, false, null],
+        ]);
+        $transferInvoice = Invoice::createFromOrder($transferOrder);
+        $transferInvoice->markPaid('transfer');
+
         unset($admin);
     }
 
@@ -383,5 +492,18 @@ class DatabaseSeeder extends Seeder
                 'free_reason' => $free ? $reason : null,
             ]);
         }
+    }
+
+    private function demoPhoto(string $label, string $accent): string
+    {
+        return <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="440" viewBox="0 0 720 440">
+<rect width="720" height="440" rx="32" fill="#18181b"/><path d="M0 320h720v120H0z" fill="#27272a"/>
+<circle cx="220" cy="300" r="66" fill="none" stroke="#a1a1aa" stroke-width="16"/><circle cx="510" cy="300" r="66" fill="none" stroke="#a1a1aa" stroke-width="16"/>
+<path d="m220 300 96-112 84 112H220l62-92h109l119 92m-190-112h103" fill="none" stroke="{$accent}" stroke-linecap="round" stroke-linejoin="round" stroke-width="22"/>
+<text x="360" y="82" fill="#fff" font-family="Arial,sans-serif" font-size="28" font-weight="700" text-anchor="middle">JOMOTO · FOTO DEMO</text>
+<text x="360" y="390" fill="{$accent}" font-family="Arial,sans-serif" font-size="26" font-weight="700" text-anchor="middle">{$label}</text>
+</svg>
+SVG;
     }
 }

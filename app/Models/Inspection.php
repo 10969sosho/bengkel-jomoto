@@ -13,12 +13,16 @@ class Inspection extends Model
         'checklist',
         'findings',
         'recommendations',
+        'before_photos',
+        'after_photos',
     ];
 
     protected function casts(): array
     {
         return [
             'checklist' => 'array',
+            'before_photos' => 'array',
+            'after_photos' => 'array',
         ];
     }
 

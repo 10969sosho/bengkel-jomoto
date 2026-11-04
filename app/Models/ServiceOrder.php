@@ -22,6 +22,11 @@ class ServiceOrder extends Model
         'status',
         'estimated_completion',
         'actual_completion',
+        'offsite_address',
+        'location_notes',
+        'visit_fee',
+        'odometer',
+        'coupon_milestone',
     ];
 
     protected function casts(): array
@@ -29,6 +34,9 @@ class ServiceOrder extends Model
         return [
             'estimated_completion' => 'datetime',
             'actual_completion' => 'datetime',
+            'visit_fee' => 'integer',
+            'odometer' => 'integer',
+            'coupon_milestone' => 'integer',
         ];
     }
 
@@ -121,6 +129,32 @@ class ServiceOrder extends Model
             'home_service' => 'Home Service',
             default => 'Reguler',
         };
+    }
+
+    /** @return array{service_type: string, milestone: int}|null */
+    public static function couponForOdometer(Vehicle $vehicle, int $odometer): ?array
+    {
+        $milestones = [1_000 => 'free_atpm', 4_000 => 'free_atpm', 7_000 => 'free_atpm'];
+        for ($milestone = 10_000; $milestone <= $odometer; $milestone += 10_000) {
+            $milestones[$milestone] = 'free_jomoto';
+        }
+
+        foreach ($milestones as $milestone => $serviceType) {
+            if ($odometer < $milestone || $odometer > $milestone + 500) {
+                continue;
+            }
+
+            $alreadyClaimed = $vehicle->serviceOrders()
+                ->where('coupon_milestone', $milestone)
+                ->where('status', '!=', 'cancelled')
+                ->exists();
+
+            if (! $alreadyClaimed) {
+                return ['service_type' => $serviceType, 'milestone' => $milestone];
+            }
+        }
+
+        return null;
     }
 
     public function elapsedSeconds(): int

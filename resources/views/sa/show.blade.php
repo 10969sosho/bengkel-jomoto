@@ -42,6 +42,15 @@
                     </div>
                 </div>
 
+                @if($serviceOrder->location_type === 'offsite')
+                    <div class="mt-3 rounded-2xl border border-lime-200 bg-lime-50 p-3.5 text-sm">
+                        <div class="font-bold text-lime-900">HOME SERVICE</div>
+                        <div class="mt-1 text-lime-800">{{ $serviceOrder->offsite_address }}</div>
+                        @if($serviceOrder->location_notes)<div class="mt-1 text-xs text-lime-700">Patokan: {{ $serviceOrder->location_notes }}</div>@endif
+                        <div class="mt-1 text-xs font-semibold text-lime-700">Biaya kunjungan Rp {{ number_format($serviceOrder->visit_fee) }}</div>
+                    </div>
+                @endif
+
                 <div class="mt-4">
                     <div class="text-xs font-bold uppercase tracking-wide text-slate-400">Keluhan</div>
                     <p class="mt-1 text-slate-700">{{ $serviceOrder->customer_complaint }}</p>
@@ -187,7 +196,7 @@
                     <div class="mt-4 flex flex-wrap items-start justify-between gap-4">
                         <div class="text-xs text-slate-400" id="empty-hint">Belum ada item — tambahkan minimal 1 jasa/sparepart/sub-material.</div>
                         <div class="min-w-[260px] rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm">
-                            <div class="flex justify-between py-0.5"><span class="text-slate-500">Total Jasa</span><span id="sum-service" class="font-semibold">Rp 0</span></div>
+                            <div class="flex justify-between py-0.5"><span class="text-slate-500">Total Jasa &amp; Kunjungan</span><span id="sum-service" class="font-semibold">Rp 0</span></div>
                             <div class="flex justify-between py-0.5"><span class="text-slate-500">Total Sparepart</span><span id="sum-sparepart" class="font-semibold">Rp 0</span></div>
                             <div class="flex justify-between py-0.5"><span class="text-slate-500">Total Sub-Material</span><span id="sum-sub_material" class="font-semibold">Rp 0</span></div>
                             <div class="mt-1 flex justify-between border-t border-slate-200 pt-1.5"><span class="font-semibold text-slate-700">Subtotal</span><span id="sum-total" class="font-bold text-slate-900">Rp 0</span></div>
@@ -343,7 +352,8 @@
     const pricelist = @json($pricelists->map(fn($p) => ['name' => $p->service_name, 'price' => (int) $p->price]));
     const subMaterials = @json($subMaterials->map(fn($s) => ['name' => $s->name, 'price' => (int) $s->default_price]));
     @php($existingItems = $serviceOrder->items->map(fn($i) => ['item_type' => $i->item_type, 'item_name' => $i->item_name, 'quantity' => $i->quantity, 'unit_price' => $i->unit_price, 'is_free' => $i->is_free, 'free_reason' => $i->free_reason])->values())
-    const existingItems = @json($existingItems);
+    const existingItems = @json($existingItems ?: $suggestedItems);
+    const visitFee = {{ (int) $serviceOrder->visit_fee }};
 
     const rupiah = n => 'Rp ' + Number(n).toLocaleString('id-ID');
     const body = document.getElementById('items-body');
@@ -351,7 +361,11 @@
 
     function optionsFor(type) {
         const source = type === 'service' ? pricelist : (type === 'sub_material' ? subMaterials : []);
-        return source.map(o => `<option value="${o.name}" data-price="${o.price}">${o.name} — ${rupiah(o.price)}</option>`).join('');
+        return source.map(o => `<option value="${escapeHtml(o.name)}" data-price="${o.price}">${escapeHtml(o.name)} — ${rupiah(o.price)}</option>`).join('');
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char]));
     }
 
     function addRow(type, item = {}) {
@@ -371,16 +385,16 @@
             </td>
             <td class="py-2 pr-2 align-top">
                 ${customName
-                    ? `<input required name="items[${idx}][item_name]" value="${item.item_name ?? ''}" placeholder="Nama sparepart (HET)"
+                    ? `<input required name="items[${idx}][item_name]" value="${escapeHtml(item.item_name)}" placeholder="Nama sparepart (HET)"
                         class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">`
                     : `<select required name="items[${idx}][item_name]" onchange="onNameChange(this)"
                         class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
                         ${optionsFor(type)}
-                        ${type === 'service' && !pricelist.find(p => p.name === item.item_name) && item.item_name ? `<option selected value="${item.item_name}">${item.item_name}</option>` : ''}
-                        ${type === 'sub_material' && item.item_name ? `<option selected value="${item.item_name}">${item.item_name}</option>` : ''}
+                        ${type === 'service' && !pricelist.find(p => p.name === item.item_name) && item.item_name ? `<option selected value="${escapeHtml(item.item_name)}">${escapeHtml(item.item_name)}</option>` : ''}
+                        ${type === 'sub_material' && item.item_name ? `<option selected value="${escapeHtml(item.item_name)}">${escapeHtml(item.item_name)}</option>` : ''}
                        </select>`}
                 <input type="hidden" name="items[${idx}][free_reason]" class="free-reason"
-                       value="${item.free_reason ?? ''}" placeholder="Alasan gratis">
+                        value="${escapeHtml(item.free_reason)}" placeholder="Alasan gratis">
             </td>
             <td class="py-2 pr-2 align-top">
                 <input type="number" name="items[${idx}][quantity]" min="1" value="${item.quantity ?? 1}" oninput="recalc()"
@@ -459,10 +473,10 @@
             else { reasonInput.value = ''; }
         });
 
-        const total = sums.service + sums.sparepart + sums.sub_material;
+        const total = sums.service + sums.sparepart + sums.sub_material + visitFee;
         const tax = Math.round(total * 0.11);
 
-        document.getElementById('sum-service').textContent = rupiah(sums.service);
+        document.getElementById('sum-service').textContent = rupiah(sums.service + visitFee);
         document.getElementById('sum-sparepart').textContent = rupiah(sums.sparepart);
         document.getElementById('sum-sub_material').textContent = rupiah(sums.sub_material);
         document.getElementById('sum-total').textContent = rupiah(total);

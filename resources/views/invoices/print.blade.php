@@ -103,6 +103,14 @@
                     </td>
                 </tr>
             @endforeach
+            @if($order->visit_fee > 0)
+                <tr>
+                    <td class="py-2.5"><span class="mr-2 rounded bg-lime-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-lime-700">Home Service</span>Biaya kunjungan teknisi</td>
+                    <td class="py-2.5 text-center">1</td>
+                    <td class="py-2.5 text-right">Rp {{ number_format($order->visit_fee) }}</td>
+                    <td class="py-2.5 text-right font-semibold">Rp {{ number_format($order->visit_fee) }}</td>
+                </tr>
+            @endif
         </tbody>
     </table>
 

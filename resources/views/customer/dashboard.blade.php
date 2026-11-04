@@ -35,6 +35,51 @@
     </div>
 </section>
 
+<section class="mb-6 grid gap-4 lg:grid-cols-2">
+    <details class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+        <summary class="cursor-pointer font-bold text-slate-900">+ Daftarkan kendaraan baru</summary>
+        <form method="POST" action="{{ route('customer.vehicles.store') }}" class="mt-4 grid gap-3 sm:grid-cols-2">
+            @csrf
+            <input name="brand" required placeholder="Merk" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+            <input name="model" required placeholder="Model" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+            <input name="plate_number" required placeholder="Plat nomor" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+            <input name="engine_number" placeholder="Nomor mesin" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+            <input name="chassis_number" placeholder="Nomor rangka" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+            <select name="fuel_type" required class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="gasoline">Bensin</option><option value="electric">Listrik</option></select>
+            <input type="number" min="0" name="last_odometer" required placeholder="KM awal" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+            <button class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-lime-300 sm:col-span-2">Simpan Kendaraan</button>
+        </form>
+    </details>
+
+    <details class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+        <summary class="cursor-pointer font-bold text-slate-900">Booking servis baru</summary>
+        <form method="POST" action="{{ route('customer.orders.store') }}" class="mt-4 space-y-3">
+            @csrf
+            <select name="vehicle_id" id="booking-vehicle" required class="w-full rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+                <option value="">Pilih kendaraan</option>
+                @foreach($vehicles as $vehicle)
+                    <option value="{{ $vehicle->id }}" data-odometer="{{ $vehicle->last_odometer }}" data-claimed="{{ $vehicle->serviceOrders->pluck('coupon_milestone')->join(',') }}">{{ $vehicle->fullName() }} · {{ $vehicle->plate_number }}</option>
+                @endforeach
+            </select>
+            <div class="grid gap-3 sm:grid-cols-2">
+                <input type="number" min="0" name="odometer" id="booking-odometer" required placeholder="KM saat ini" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+                <select name="location_type" id="booking-location" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+                    <option value="onsite">Service di Bengkel</option><option value="offsite">Service Panggilan (Home Service)</option>
+                </select>
+            </div>
+            <div id="booking-coupon" class="hidden rounded-xl border border-lime-200 bg-lime-50 p-3 text-sm font-bold text-lime-800"></div>
+            <div id="booking-home" class="hidden space-y-2 rounded-xl border border-lime-200 bg-lime-50 p-3">
+                <textarea name="offsite_address" id="booking-address" rows="2" placeholder="Alamat lengkap service" class="w-full rounded-lg border-lime-200 bg-white px-3 py-2 text-sm"></textarea>
+                <input name="location_notes" placeholder="Catatan patokan lokasi" class="w-full rounded-lg border-lime-200 bg-white px-3 py-2 text-sm">
+                <label class="block text-xs font-semibold text-lime-900">Biaya kunjungan (Rp)</label>
+                <input type="number" min="0" name="visit_fee" value="50000" class="w-full rounded-lg border-lime-200 bg-white px-3 py-2 text-sm">
+            </div>
+            <textarea name="customer_complaint" required rows="2" placeholder="Keluhan motor" class="w-full rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"></textarea>
+            <button class="w-full rounded-xl bg-lime-300 px-4 py-2.5 text-sm font-bold text-black">Kirim Booking</button>
+        </form>
+    </details>
+</section>
+
 {{-- Progress servis aktif --}}
 <section class="mb-6">
     <h2 class="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -54,6 +99,11 @@
                         <b>{{ $order->vehicle?->fullName() }}</b> ({{ $order->vehicle?->plate_number }}) ·
                         {{ $order->serviceTypeLabel() }}
                     </div>
+                    @if($order->location_type === 'offsite')
+                        <div class="mt-2 rounded-xl bg-lime-50 px-3 py-2 text-xs font-semibold text-lime-800">
+                            HOME SERVICE · {{ $order->offsite_address }} · Biaya kunjungan Rp {{ number_format($order->visit_fee) }}
+                        </div>
+                    @endif
                     <p class="mt-1 max-w-2xl text-sm text-slate-500">“{{ $order->customer_complaint }}”</p>
                 </div>
                 <div class="rounded-2xl bg-slate-50 px-4 py-3 text-right text-sm">
@@ -144,4 +194,35 @@
         </div>
     </div>
 </section>
+
+<script>
+    const bookingVehicle = document.getElementById('booking-vehicle');
+    const bookingOdometer = document.getElementById('booking-odometer');
+    const bookingLocation = document.getElementById('booking-location');
+    const bookingHome = document.getElementById('booking-home');
+    const bookingAddress = document.getElementById('booking-address');
+    const bookingCoupon = document.getElementById('booking-coupon');
+    const updateCoupon = () => {
+        const km = Number(bookingOdometer.value);
+        const atpm = [1000, 4000, 7000].find(value => km >= value && km <= value + 500);
+        const jomoto = km >= 10000 ? Math.floor(km / 10000) * 10000 : null;
+        const candidate = atpm || (jomoto && km <= jomoto + 500 ? jomoto : null);
+        const claimed = (bookingVehicle.selectedOptions[0]?.dataset.claimed || '').split(',').map(Number);
+        const milestone = candidate && !claimed.includes(candidate) ? candidate : null;
+        bookingCoupon.classList.toggle('hidden', !milestone);
+        bookingCoupon.textContent = milestone ? (atpm
+            ? `Klaim Gratis ATPM ${milestone.toLocaleString('id-ID')} KM · oli, sparepart dasar & jasa gratis`
+            : `Klaim Gratis Jomoto ${milestone.toLocaleString('id-ID')} KM · jasa gratis, sparepart bayar`) : '';
+    };
+    bookingVehicle.addEventListener('change', () => {
+        bookingOdometer.value = bookingVehicle.selectedOptions[0]?.dataset.odometer || '';
+        updateCoupon();
+    });
+    bookingOdometer.addEventListener('input', updateCoupon);
+    bookingLocation.addEventListener('change', () => {
+        const offsite = bookingLocation.value === 'offsite';
+        bookingHome.classList.toggle('hidden', !offsite);
+        bookingAddress.required = offsite;
+    });
+</script>
 @endsection

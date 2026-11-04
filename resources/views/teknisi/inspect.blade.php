@@ -32,9 +32,15 @@
                 <span class="rounded-lg bg-white px-2 py-1">{{ $order->vehicle?->fuelLabel() }}</span>
                 <span class="rounded-lg bg-white px-2 py-1">Tahun {{ $order->vehicle?->year }}</span>
             </div>
+            @if($order->location_type === 'offsite')
+                <div class="mt-3 rounded-xl bg-lime-100 p-3 text-lime-900">
+                    <b>HOME SERVICE · {{ $order->offsite_address }}</b>
+                    @if($order->location_notes)<div class="text-xs">Patokan: {{ $order->location_notes }}</div>@endif
+                </div>
+            @endif
         </div>
 
-        <form method="POST" action="{{ route('teknisi.inspect.save', $order) }}" class="mt-5">
+        <form method="POST" enctype="multipart/form-data" action="{{ route('teknisi.inspect.save', $order) }}" class="mt-5">
             @csrf
 
             <div class="mb-3 flex items-center gap-2">
@@ -75,6 +81,24 @@
                               class="w-full rounded-2xl border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none transition focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200"
                               placeholder="Contoh: ganti kampas rem, bersihkan CVT, tambah gemuk...">{{ old('recommendations', $order->inspection?->recommendations) }}</textarea>
                 </div>
+            </div>
+
+            <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                @foreach(['before' => 'Foto Sebelum Perbaikan', 'after' => 'Foto Sesudah Perbaikan'] as $phase => $label)
+                    @php($photos = $order->inspection?->{$phase.'_photos'} ?? [])
+                    <div class="rounded-2xl border border-slate-200 p-4">
+                        <label class="mb-2 block text-sm font-bold text-slate-700">{{ $label }}</label>
+                        <input type="file" name="{{ $phase }}_photos[]" accept="image/jpeg,image/png,image/webp" multiple
+                               class="w-full text-xs text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-lime-100 file:px-3 file:py-2 file:font-bold file:text-lime-800">
+                        <div class="mt-3 grid grid-cols-3 gap-2">
+                            @foreach($photos as $photo)
+                                <a href="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($photo) }}" target="_blank" rel="noopener">
+                                    <img src="{{ \Illuminate\Support\Facades\Storage::disk('public')->url($photo) }}" alt="{{ $label }}" class="h-20 w-full rounded-xl object-cover">
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
             </div>
 
             <div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
