@@ -148,6 +148,9 @@
                 <div class="text-xs text-slate-500">
                     {{ $invoice->isPaid() ? 'Dibayar pada '.$invoice->paid_at->format('d F Y H:i') : 'Metode: QRIS / Cash / Transfer via SA' }}
                 </div>
+                @if($invoice->isPaid() && ($invoice->payment_reference || $invoice->bank_account))
+                    <div class="mt-1 text-xs text-slate-500">{{ $invoice->bank_account }}{{ $invoice->payment_reference ? ' · Ref '.$invoice->payment_reference : '' }}</div>
+                @endif
             </div>
         </div>
 

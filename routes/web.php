@@ -17,7 +17,13 @@ Route::middleware('role:sa')->prefix('sa')->name('sa.')->group(function () {
     Route::get('/', [SaController::class, 'index'])->name('index');
     Route::get('/wo/create', [SaController::class, 'create'])->name('create');
     Route::post('/wo', [SaController::class, 'store'])->name('store');
+    Route::get('/customers', [SaController::class, 'customers'])->name('customers.index');
+    Route::post('/customers', [SaController::class, 'storeCustomer'])->name('customers.store');
+    Route::get('/customers/{customer}', [SaController::class, 'showCustomer'])->name('customers.show');
     Route::post('/customers/{customer}/vehicles', [SaController::class, 'storeVehicle'])->name('vehicles.store');
+    Route::put('/vehicles/{vehicle}', [SaController::class, 'updateVehicle'])->name('vehicles.update');
+    Route::get('/payments', [SaController::class, 'payments'])->name('payments.index');
+    Route::post('/payments/{invoice}/pay', [InvoiceController::class, 'pay'])->name('payments.pay');
     Route::get('/wo/{serviceOrder}', [SaController::class, 'show'])->name('show');
     Route::post('/wo/{serviceOrder}/assign', [SaController::class, 'assign'])->name('assign');
     Route::post('/wo/{serviceOrder}/estimate', [SaController::class, 'estimate'])->name('estimate');

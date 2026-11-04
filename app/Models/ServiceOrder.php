@@ -132,7 +132,7 @@ class ServiceOrder extends Model
     }
 
     /** @return array{service_type: string, milestone: int}|null */
-    public static function couponForOdometer(Vehicle $vehicle, int $odometer): ?array
+    public static function couponForOdometer(Vehicle $vehicle, int $odometer, ?int $ignoreOrderId = null): ?array
     {
         $milestones = [1_000 => 'free_atpm', 4_000 => 'free_atpm', 7_000 => 'free_atpm'];
         for ($milestone = 10_000; $milestone <= $odometer; $milestone += 10_000) {
@@ -147,6 +147,7 @@ class ServiceOrder extends Model
             $alreadyClaimed = $vehicle->serviceOrders()
                 ->where('coupon_milestone', $milestone)
                 ->where('status', '!=', 'cancelled')
+                ->when($ignoreOrderId !== null, fn ($query) => $query->where('id', '!=', $ignoreOrderId))
                 ->exists();
 
             if (! $alreadyClaimed) {

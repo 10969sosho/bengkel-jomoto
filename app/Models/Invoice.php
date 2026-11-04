@@ -20,6 +20,8 @@ class Invoice extends Model
         'grand_total',
         'payment_method',
         'payment_status',
+        'payment_reference',
+        'bank_account',
         'paid_at',
     ];
 
@@ -81,11 +83,13 @@ class Invoice extends Model
         return $prefix.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
     }
 
-    public function markPaid(string $method): void
+    public function markPaid(string $method, ?string $reference = null, ?string $bankAccount = null): void
     {
         $this->update([
             'payment_method' => $method,
             'payment_status' => 'paid',
+            'payment_reference' => $reference,
+            'bank_account' => $bankAccount,
             'paid_at' => now(),
         ]);
     }

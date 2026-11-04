@@ -17,12 +17,18 @@
             </span>
             <div>
                 <h1 class="text-xl font-bold text-slate-900">Buat Work Order Baru</h1>
-                <p class="text-sm text-slate-500">Catat keluhan customer, pilih motor, tentukan jenis &amp; lokasi service.</p>
+                <p class="text-sm text-slate-500">Catat keluhan customer, pilih motor, tentukan lokasi, dan tugaskan teknisi.</p>
             </div>
         </div>
+        @if($selectedBooking)
+            <div class="mt-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">
+                Memproses booking {{ $selectedBooking->wo_number }} · data booking sudah diisi otomatis.
+            </div>
+        @endif
 
         <form method="POST" action="{{ route('sa.store') }}" class="mt-6 space-y-5">
             @csrf
+            @if($selectedBooking)<input type="hidden" name="booking_id" value="{{ $selectedBooking->id }}">@endif
 
             <div class="grid gap-5 sm:grid-cols-2">
                 <div>
@@ -47,17 +53,27 @@
                 </div>
 
                 <div>
+                    <label class="mb-1.5 block text-sm font-semibold text-slate-700">Tugaskan ke Teknisi</label>
+                    <select name="technician_id" required class="w-full cursor-pointer rounded-2xl border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none transition focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">
+                        <option value="">— Pilih teknisi —</option>
+                        @foreach($technicians as $technician)
+                            <option value="{{ $technician->id }}" @selected(old('technician_id') == $technician->id)>{{ $technician->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div>
                     <label class="mb-1.5 block text-sm font-semibold text-slate-700">Lokasi Service</label>
                     <select name="location_type" id="location_type" required
                             class="w-full cursor-pointer rounded-2xl border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none transition focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">
-                        <option value="onsite">Service di Bengkel</option>
-                        <option value="offsite">Service Panggilan (Home Service)</option>
+                        <option value="onsite" @selected(old('location_type', $selectedBooking?->location_type ?? 'onsite') === 'onsite')>Service di Bengkel</option>
+                        <option value="offsite" @selected(old('location_type', $selectedBooking?->location_type) === 'offsite')>Service Panggilan (Home Service)</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="mb-1.5 block text-sm font-semibold text-slate-700">KM Saat Ini</label>
-                    <input type="number" min="0" name="odometer" id="odometer" value="{{ old('odometer') }}" required
+                    <input type="number" min="0" name="odometer" id="odometer" value="{{ old('odometer', $selectedBooking?->odometer ?? $selectedBooking?->vehicle?->last_odometer) }}" required
                            class="w-full rounded-2xl border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">
                 </div>
 
@@ -67,16 +83,16 @@
                     <div class="grid gap-3 sm:grid-cols-2">
                         <div>
                             <label class="mb-1 block text-sm font-semibold text-lime-900">Alamat Service Panggilan</label>
-                            <textarea name="offsite_address" rows="2" class="w-full rounded-xl border-lime-200 bg-white px-3 py-2.5 text-sm" placeholder="Alamat lengkap customer"></textarea>
+                            <textarea name="offsite_address" rows="2" class="w-full rounded-xl border-lime-200 bg-white px-3 py-2.5 text-sm" placeholder="Alamat lengkap customer">{{ old('offsite_address', $selectedBooking?->offsite_address) }}</textarea>
                         </div>
                         <div>
                             <label class="mb-1 block text-sm font-semibold text-lime-900">Catatan Patokan</label>
-                            <textarea name="location_notes" rows="2" class="w-full rounded-xl border-lime-200 bg-white px-3 py-2.5 text-sm" placeholder="Patokan lokasi / akses masuk"></textarea>
+                            <textarea name="location_notes" rows="2" class="w-full rounded-xl border-lime-200 bg-white px-3 py-2.5 text-sm" placeholder="Patokan lokasi / akses masuk">{{ old('location_notes', $selectedBooking?->location_notes) }}</textarea>
                         </div>
                     </div>
                     <div class="max-w-xs">
                         <label class="mb-1 block text-sm font-semibold text-lime-900">Biaya Kunjungan (Rp)</label>
-                        <input type="number" min="0" name="visit_fee" value="50000" class="w-full rounded-xl border-lime-200 bg-white px-3 py-2.5 text-sm">
+                        <input type="number" min="0" name="visit_fee" value="{{ old('visit_fee', $selectedBooking?->visit_fee ?? 50000) }}" class="w-full rounded-xl border-lime-200 bg-white px-3 py-2.5 text-sm">
                     </div>
                 </div>
 
@@ -89,7 +105,7 @@
                 <div class="sm:col-span-2">
                     <label class="mb-1.5 block text-sm font-semibold text-slate-700">Keluhan Customer <span class="text-red-500">*</span></label>
                     <textarea name="customer_complaint" rows="4" required placeholder="Contoh: motor sering mati mendadak saat perjalanan jauh, rem depan bunyi..."
-                              class="w-full rounded-2xl border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none transition focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">{{ old('customer_complaint') }}</textarea>
+                              class="w-full rounded-2xl border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none transition focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">{{ old('customer_complaint', $selectedBooking?->customer_complaint) }}</textarea>
                 </div>
             </div>
 
@@ -113,6 +129,7 @@
             <input name="brand" required placeholder="Merk" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
             <input name="model" required placeholder="Model" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
             <input name="plate_number" required placeholder="Plat nomor" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
+            <input type="number" name="year" min="1950" max="{{ now()->year + 1 }}" required placeholder="Tahun" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
             <input name="engine_number" placeholder="Nomor mesin" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
             <input name="chassis_number" placeholder="Nomor rangka" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
             <select name="fuel_type" required class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="gasoline">Bensin</option><option value="electric">Listrik</option></select>
@@ -174,6 +191,11 @@ vehicleCustomer.addEventListener('change', () => {
     document.getElementById('vehicle-form').action = `{{ url('/sa/customers') }}/${vehicleCustomer.value}/vehicles`;
 });
 if (customerSelect.value) customerSelect.dispatchEvent(new Event('change'));
+@if($selectedBooking)
+vehicleSelect.value = '{{ $selectedBooking->vehicle_id }}';
+odometerInput.value = '{{ $selectedBooking->odometer ?? $selectedBooking->vehicle?->last_odometer }}';
+showCoupon();
+@endif
 locationSelect.dispatchEvent(new Event('change'));
 </script>
 @endsection

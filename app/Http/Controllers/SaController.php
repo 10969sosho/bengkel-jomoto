@@ -10,6 +10,8 @@ use App\Models\User;
 use App\Models\Vehicle;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -29,8 +31,13 @@ class SaController extends Controller
             'unpaid' => $orders->filter(fn (ServiceOrder $order): bool => $order->status === 'invoiced'
                 && $order->invoice?->payment_status === 'unpaid')->count(),
         ];
+        $bookings = ServiceOrder::with(['customer', 'vehicle'])
+            ->where('status', 'draft')
+            ->whereNull('sa_id')
+            ->orderByDesc('id')
+            ->get();
 
-        return view('sa.dashboard', compact('orders', 'stats'));
+        return view('sa.dashboard', compact('orders', 'stats', 'bookings'));
     }
 
     public function create(): View
@@ -39,16 +46,22 @@ class SaController extends Controller
             ->with(['vehicles.serviceOrders' => fn ($query) => $query->whereNotNull('coupon_milestone')->where('status', '!=', 'cancelled')])
             ->orderBy('name')->get();
 
-        $selectedCustomerId = request()->integer('customer_id');
+        $selectedBooking = request()->filled('booking_id')
+            ? ServiceOrder::where('status', 'draft')->whereNull('sa_id')->with(['customer', 'vehicle'])->findOrFail(request()->integer('booking_id'))
+            : null;
+        $selectedCustomerId = $selectedBooking?->customer_id ?? request()->integer('customer_id');
+        $technicians = User::where('role', 'teknisi')->orderBy('name')->get();
 
-        return view('sa.create', compact('customers', 'selectedCustomerId'));
+        return view('sa.create', compact('customers', 'selectedCustomerId', 'selectedBooking', 'technicians'));
     }
 
     public function store(Request $request): RedirectResponse
     {
         $data = $request->validate([
+            'booking_id' => ['nullable', 'integer', Rule::exists('service_orders', 'id')->where('status', 'draft')->whereNull('sa_id')],
             'customer_id' => ['required', Rule::exists('users', 'id')->where('role', 'customer')],
             'vehicle_id' => ['required', Rule::exists('vehicles', 'id')->where('user_id', $request->integer('customer_id'))],
+            'technician_id' => ['required', Rule::exists('users', 'id')->where('role', 'teknisi')],
             'location_type' => ['required', 'in:onsite,offsite'],
             'offsite_address' => ['required_if:location_type,offsite', 'nullable', 'string', 'max:1000'],
             'location_notes' => ['nullable', 'string', 'max:255'],
@@ -58,14 +71,22 @@ class SaController extends Controller
             'estimated_completion' => ['nullable', 'date'],
         ]);
 
-        $vehicle = Vehicle::findOrFail($data['vehicle_id']);
-        $coupon = ServiceOrder::couponForOdometer($vehicle, $data['odometer']);
-        $offsite = $data['location_type'] === 'offsite';
-        $vehicle->update(['last_odometer' => $data['odometer']]);
+        $booking = isset($data['booking_id'])
+            ? ServiceOrder::where('status', 'draft')->whereNull('sa_id')->findOrFail($data['booking_id'])
+            : null;
+        if ($booking) {
+            $data['customer_id'] = $booking->customer_id;
+            $data['vehicle_id'] = $booking->vehicle_id;
+        }
 
-        $order = ServiceOrder::create([
+        $vehicle = Vehicle::findOrFail($data['vehicle_id']);
+        $coupon = ServiceOrder::couponForOdometer($vehicle, $data['odometer'], $booking?->id);
+        $offsite = $data['location_type'] === 'offsite';
+
+        $orderData = [
             'customer_id' => $data['customer_id'],
             'vehicle_id' => $data['vehicle_id'],
+            'technician_id' => $data['technician_id'],
             'location_type' => $data['location_type'],
             'offsite_address' => $offsite ? $data['offsite_address'] : null,
             'location_notes' => $offsite ? ($data['location_notes'] ?? null) : null,
@@ -75,10 +96,21 @@ class SaController extends Controller
             'coupon_milestone' => $coupon['milestone'] ?? null,
             'customer_complaint' => $data['customer_complaint'],
             'estimated_completion' => $data['estimated_completion'] ?? null,
-            'wo_number' => ServiceOrder::generateWoNumber(),
             'sa_id' => auth()->id(),
             'status' => 'draft',
-        ]);
+        ];
+
+        $order = DB::transaction(function () use ($vehicle, $data, $booking, $orderData): ServiceOrder {
+            $vehicle->update(['last_odometer' => $data['odometer']]);
+
+            if ($booking) {
+                $booking->update($orderData);
+
+                return $booking;
+            }
+
+            return ServiceOrder::create($orderData + ['wo_number' => ServiceOrder::generateWoNumber()]);
+        });
 
         return redirect()->route('sa.show', $order)
             ->with('success', "Work Order {$order->wo_number} berhasil dibuat.");
@@ -135,21 +167,121 @@ class SaController extends Controller
             'brand' => ['required', 'string', 'max:100'],
             'model' => ['required', 'string', 'max:100'],
             'plate_number' => ['required', 'string', 'max:20', Rule::unique('vehicles', 'plate_number')],
+            'year' => ['required', 'integer', 'between:1950,'.(now()->year + 1)],
             'engine_number' => ['nullable', 'string', 'max:100'],
             'chassis_number' => ['nullable', 'string', 'max:100'],
             'fuel_type' => ['required', 'in:electric,gasoline'],
             'last_odometer' => ['required', 'integer', 'min:0'],
         ]);
 
-        $customer->vehicles()->create($data + ['year' => now()->year]);
+        $customer->vehicles()->create($data);
 
         return back()->with('success', 'Kendaraan baru berhasil ditambahkan ke customer.');
+    }
+
+    public function customers(Request $request): View
+    {
+        $search = trim($request->string('q')->toString());
+        $customers = User::query()
+            ->where('role', 'customer')
+            ->withCount('vehicles')
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%")
+                        ->orWhere('whatsapp', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->orderBy('name')
+            ->paginate(15)
+            ->withQueryString();
+
+        return view('customers.index', compact('customers', 'search'));
+    }
+
+    public function storeCustomer(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone' => ['required', 'string', 'max:30'],
+            'whatsapp' => ['nullable', 'string', 'max:30'],
+            'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+        ]);
+
+        $customer = User::create($data + [
+            'password' => Str::random(40),
+            'role' => 'customer',
+        ]);
+
+        return redirect()->route('sa.customers.show', $customer)->with('success', 'Customer baru berhasil ditambahkan.');
+    }
+
+    public function showCustomer(User $customer): View
+    {
+        abort_unless($customer->role === 'customer', 404);
+
+        $customer->load(['vehicles' => fn ($query) => $query->orderBy('plate_number')]);
+        $orders = $customer->customerOrders()
+            ->with(['vehicle', 'technician', 'invoice'])
+            ->orderByDesc('id')
+            ->get();
+
+        return view('customers.show', compact('customer', 'orders'));
+    }
+
+    public function updateVehicle(Request $request, Vehicle $vehicle): RedirectResponse
+    {
+        $data = $request->validate([
+            'brand' => ['required', 'string', 'max:100'],
+            'model' => ['required', 'string', 'max:100'],
+            'plate_number' => ['required', 'string', 'max:20', Rule::unique('vehicles', 'plate_number')->ignore($vehicle->id)],
+            'year' => ['required', 'integer', 'between:1950,'.(now()->year + 1)],
+            'engine_number' => ['nullable', 'string', 'max:100'],
+            'chassis_number' => ['nullable', 'string', 'max:100'],
+            'fuel_type' => ['required', 'in:electric,gasoline'],
+            'last_odometer' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $vehicle->update($data);
+
+        return back()->with('success', 'Data kendaraan berhasil diperbarui.');
+    }
+
+    public function payments(Request $request): View
+    {
+        $filter = $request->string('status', 'all')->toString();
+        abort_unless(in_array($filter, ['all', 'unpaid', 'paid'], true), 404);
+        $search = trim($request->string('q')->toString());
+
+        $invoices = Invoice::query()
+            ->with(['serviceOrder.customer', 'serviceOrder.vehicle'])
+            ->when($filter !== 'all', fn ($query) => $query->where('payment_status', $filter))
+            ->when($search !== '', function ($query) use ($search): void {
+                $query->where(function ($query) use ($search): void {
+                    $query->where('invoice_number', 'like', "%{$search}%")
+                        ->orWhereHas('serviceOrder.customer', fn ($query) => $query->where('name', 'like', "%{$search}%"))
+                        ->orWhereHas('serviceOrder.vehicle', fn ($query) => $query->where('plate_number', 'like', "%{$search}%"));
+                });
+            })
+            ->orderByDesc('id')
+            ->paginate(15)
+            ->withQueryString();
+
+        $stats = [
+            'unpaid' => Invoice::where('payment_status', 'unpaid')->sum('grand_total'),
+            'paid_today' => Invoice::where('payment_status', 'paid')->whereDate('paid_at', today())->sum('grand_total'),
+            'transactions' => Invoice::count(),
+        ];
+        $bankAccounts = InvoiceController::BANK_ACCOUNTS;
+
+        return view('sa.payments', compact('invoices', 'stats', 'filter', 'search', 'bankAccounts'));
     }
 
     public function assign(Request $request, ServiceOrder $serviceOrder): RedirectResponse
     {
         $data = $request->validate([
-            'technician_id' => ['required', 'exists:users,id'],
+            'technician_id' => ['required', Rule::exists('users', 'id')->where('role', 'teknisi')],
             'estimated_completion' => ['nullable', 'date'],
         ]);
 

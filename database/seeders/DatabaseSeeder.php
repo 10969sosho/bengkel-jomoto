@@ -51,7 +51,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $agus = User::create([
-            'name' => 'Agus Prasetyo',
+            'name' => 'Agus Pratama',
             'email' => 'agus.teknisi@jomoto.com',
             'password' => $password,
             'phone' => '0812-3456-7803',
@@ -203,6 +203,17 @@ class DatabaseSeeder extends Seeder
             'chassis_number' => 'MH1JFP112RK23981',
             'fuel_type' => 'gasoline',
             'last_odometer' => 4200,
+        ]);
+
+        ServiceOrder::create([
+            'wo_number' => ServiceOrder::generateWoNumber(),
+            'customer_id' => $citra->id,
+            'vehicle_id' => $beat->id,
+            'customer_complaint' => 'Booking servis dari customer: motor terasa bergetar saat akselerasi.',
+            'service_type' => 'regular',
+            'odometer' => 4200,
+            'location_type' => 'onsite',
+            'status' => 'draft',
         ]);
 
         // ── Service Order 1: Antrian baru (draft) ──
@@ -447,6 +458,24 @@ class DatabaseSeeder extends Seeder
         ]);
         $transferInvoice = Invoice::createFromOrder($transferOrder);
         $transferInvoice->markPaid('transfer');
+
+        $cashierOrder = ServiceOrder::create([
+            'wo_number' => ServiceOrder::generateWoNumber(),
+            'customer_id' => $citra->id,
+            'vehicle_id' => $beat->id,
+            'sa_id' => $sa->id,
+            'technician_id' => $agus->id,
+            'customer_complaint' => 'Servis berkala dan pengecekan rem.',
+            'sa_diagnosis' => 'Servis berkala ringan.',
+            'service_type' => 'regular',
+            'location_type' => 'onsite',
+            'status' => 'invoiced',
+            'actual_completion' => now()->subHour(),
+        ]);
+        $this->addItems($cashierOrder, [
+            ['service', 'Servis Berkala Ringan', 1, 85000, false, null],
+        ]);
+        Invoice::createFromOrder($cashierOrder);
 
         unset($admin);
     }

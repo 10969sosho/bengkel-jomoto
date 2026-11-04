@@ -37,6 +37,50 @@
     @endforeach
 </div>
 
+<section class="mb-6 overflow-hidden rounded-3xl border border-amber-200 bg-white shadow-sm">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-amber-100 bg-amber-50/70 px-5 py-4">
+        <div>
+            <h2 class="font-bold text-slate-900">Booking Service Masuk</h2>
+            <p class="text-xs text-slate-500">Booking customer yang belum diproses menjadi work order.</p>
+        </div>
+        <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">{{ $bookings->count() }} booking</span>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+            <thead class="text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                <tr>
+                    <th class="px-5 py-3">Customer / Motor</th>
+                    <th class="px-5 py-3">Keluhan</th>
+                    <th class="px-5 py-3">KM / Lokasi</th>
+                    <th class="px-5 py-3 text-right">Aksi</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+                @forelse($bookings as $booking)
+                    <tr>
+                        <td class="px-5 py-3.5">
+                            <div class="font-semibold text-slate-800">{{ $booking->customer?->name }}</div>
+                            <div class="text-xs text-slate-500">{{ $booking->vehicle?->fullName() }} · {{ $booking->vehicle?->plate_number }}</div>
+                        </td>
+                        <td class="max-w-sm px-5 py-3.5 text-slate-600">{{ $booking->customer_complaint }}</td>
+                        <td class="px-5 py-3.5 text-slate-600">
+                            {{ number_format($booking->odometer ?? $booking->vehicle?->last_odometer ?? 0) }} KM
+                            <div class="text-xs text-slate-400">{{ $booking->location_type === 'offsite' ? 'Home Service' : 'Di Bengkel' }}</div>
+                        </td>
+                        <td class="px-5 py-3.5 text-right">
+                            <a href="{{ route('sa.create', ['booking_id' => $booking->id]) }}" class="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-amber-600">
+                                Proses jadi WO <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
+                            </a>
+                        </td>
+                    </tr>
+                @empty
+                    <tr><td colspan="4" class="px-5 py-8 text-center text-slate-400">Tidak ada booking yang menunggu diproses.</td></tr>
+                @endforelse
+            </tbody>
+        </table>
+    </div>
+</section>
+
 <div class="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
     <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
         <h2 class="flex items-center gap-2 font-bold text-slate-900">

@@ -54,14 +54,23 @@
     $role = $user?->role;
     $routeName = request()->route()?->getName() ?? '';
     $roleLabels = ['sa' => 'Service Adviser', 'teknisi' => 'Teknisi', 'customer' => 'Customer', 'admin' => 'Admin'];
+    $demoRoles = [
+        ['role' => 'sa', 'label' => 'Service Adviser'],
+        ['role' => 'teknisi', 'technician' => 'Budi Santoso', 'label' => 'Teknisi (Budi)'],
+        ['role' => 'teknisi', 'technician' => 'Agus Pratama', 'label' => 'Teknisi (Agus)'],
+        ['role' => 'customer', 'label' => 'Customer'],
+        ['role' => 'admin', 'label' => 'Admin'],
+    ];
 
     $menus = [
         'sa' => [
             ['label' => 'OPERASIONAL', 'items' => [
                 ['text' => 'Work Order', 'route' => 'sa.index', 'icon' => 'clipboard-list'],
+                ['text' => 'Kasir & Pembayaran', 'route' => 'sa.payments.index', 'icon' => 'wallet-cards'],
             ]],
             ['label' => 'LAYANAN & ESTIMASI', 'items' => [
                 ['text' => 'Buat WO Baru', 'route' => 'sa.create', 'icon' => 'file-plus-2'],
+                ['text' => 'Kelola Pelanggan', 'route' => 'sa.customers.index', 'icon' => 'users-round'],
                 ['text' => 'Dokumentasi API', 'route' => 'api-docs', 'icon' => 'braces'],
             ]],
         ],
@@ -134,7 +143,7 @@
                 <div class="space-y-1">
                     @foreach($group['items'] as $item)
                         @php
-                            $active = $routeName === $item['route'] && ! isset($item['anchor']);
+                            $active = ($routeName === $item['route'] || ($item['route'] === 'sa.customers.index' && str_starts_with($routeName, 'sa.customers.'))) && ! isset($item['anchor']);
                             $url = route($item['route']) . (isset($item['anchor']) ? '#'.$item['anchor'] : '');
                         @endphp
                         <a href="{{ $url }}" data-label="{{ strtolower($item['text']) }}"
@@ -214,18 +223,20 @@
                     </button>
                     <div id="role-menu" class="pop-in absolute right-0 z-50 mt-2 hidden w-60 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/10">
                         <div class="px-2 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Switcher Role Demo</div>
-                        @foreach($roleLabels as $key => $label)
-                            <form method="POST" action="{{ route('demo.switch') }}">
-                                @csrf
-                                <input type="hidden" name="role" value="{{ $key }}">
-                                <button type="submit"
-                                        class="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-sm font-semibold transition
-                                            {{ $role === $key ? 'bg-lime-50 text-lime-700' : 'text-slate-600 hover:bg-slate-50' }}">
-                                    <span class="grid h-7 w-7 place-items-center rounded-full bg-slate-900 text-[10px] font-black uppercase text-lime-300">
-                                        {{ strtoupper(substr($label, 0, 2)) }}
-                                    </span>
-                                    {{ $label }}
-                                    @if($role === $key)
+                         @foreach($demoRoles as $demoRole)
+                             @php($isCurrentDemoRole = $role === $demoRole['role'] && (! isset($demoRole['technician']) || $user?->name === $demoRole['technician']))
+                             <form method="POST" action="{{ route('demo.switch') }}">
+                                 @csrf
+                                 <input type="hidden" name="role" value="{{ $demoRole['role'] }}">
+                                 @isset($demoRole['technician'])<input type="hidden" name="technician" value="{{ $demoRole['technician'] }}">@endisset
+                                 <button type="submit"
+                                         class="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-sm font-semibold transition
+                                            {{ $isCurrentDemoRole ? 'bg-lime-50 text-lime-700' : 'text-slate-600 hover:bg-slate-50' }}">
+                                     <span class="grid h-7 w-7 place-items-center rounded-full bg-slate-900 text-[10px] font-black uppercase text-lime-300">
+                                         {{ strtoupper(substr($demoRole['label'], 0, 2)) }}
+                                     </span>
+                                     {{ $demoRole['label'] }}
+                                     @if($isCurrentDemoRole)
                                         <i data-lucide="check" class="ml-auto h-4 w-4 text-lime-500"></i>
                                     @endif
                                 </button>

@@ -316,32 +316,18 @@
                             </b>
                         </p>
                     </div>
-                    <a href="{{ route('invoices.print', $invoice) }}"
-                       class="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-purple-700 active:scale-[.98]">
-                        <i data-lucide="printer" class="h-4 w-4"></i> Cetak Kwitansi
-                    </a>
+                    @if($invoice->isPaid())
+                        <a href="{{ route('invoices.print', $invoice) }}"
+                           class="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-purple-700 active:scale-[.98]">
+                            <i data-lucide="printer" class="h-4 w-4"></i> Cetak Kwitansi
+                        </a>
+                    @else
+                        <a href="{{ route('sa.payments.index', ['status' => 'unpaid', 'q' => $invoice->invoice_number]) }}"
+                           class="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-purple-700 active:scale-[.98]">
+                            <i data-lucide="credit-card" class="h-4 w-4"></i> Proses di Kasir
+                        </a>
+                    @endif
                 </div>
-
-                @if(! $invoice->isPaid())
-                    <form method="POST" action="{{ route('sa.invoices.pay', $invoice) }}" class="mt-4 flex flex-wrap items-end gap-2">
-                        @csrf
-                        <div>
-                            <label class="mb-1 block text-xs font-bold uppercase text-purple-600">Metode Bayar</label>
-                            <select name="payment_method" required
-                                    class="cursor-pointer rounded-xl border-purple-200 bg-white px-3.5 py-2.5 text-sm outline-none transition focus:border-purple-400 focus:ring-2 focus:ring-purple-200">
-                                <option value="qris">QRIS</option>
-                                <option value="cash">Cash</option>
-                                <option value="transfer">Transfer</option>
-                            </select>
-                        </div>
-                        <button class="inline-flex items-center gap-2 rounded-xl bg-purple-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-purple-700 active:scale-[.98]">
-                            <i data-lucide="credit-card" class="h-4 w-4"></i> Tandai Sudah Bayar
-                        </button>
-                    </form>
-                    <div class="mt-3 inline-flex items-center gap-2 rounded-2xl border border-dashed border-purple-300 bg-white px-4 py-2.5 text-xs font-bold tracking-widest text-purple-600">
-                        <i data-lucide="qr-code" class="h-4 w-4"></i> QRIS · {{ $invoice->invoice_number }}
-                    </div>
-                @endif
             </div>
         @endif
     </div>
