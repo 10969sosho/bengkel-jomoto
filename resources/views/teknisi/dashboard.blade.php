@@ -39,6 +39,8 @@
         @php
             $closed = (int) $order->workLogs->whereNotNull('stopped_at')->sum('duration_seconds');
             $open = $order->workLogs->whereNull('stopped_at')->sortByDesc('id')->first();
+            $paused = $order->status === 'working' && $open === null;
+            $pauseLogs = $order->workLogs->filter(fn ($log) => $log->pause_reason !== null)->sortByDesc('stopped_at')->values();
         @endphp
         <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm transition duration-300 hover:shadow-md
             {{ $order->status === 'working' ? 'ring-2 ring-lime-300/60' : '' }}">
@@ -49,8 +51,9 @@
                         <span class="font-mono text-sm font-extrabold text-slate-900">{{ $order->wo_number }}</span>
                         <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $order->statusColor() }}">{{ $order->statusLabel() }}</span>
                         @if($order->status === 'working')
-                            <span class="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-2.5 py-1 text-xs font-bold text-lime-300">
-                                <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-lime-400"></span> TIMER BERJALAN
+                            <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold {{ $paused ? 'bg-amber-100 text-amber-800' : 'bg-slate-900 text-lime-300' }}">
+                                <span class="h-1.5 w-1.5 animate-pulse rounded-full {{ $paused ? 'bg-amber-500' : 'bg-lime-400' }}"></span>
+                                {{ $paused ? 'TIMER DIJEDA' : 'TIMER BERJALAN' }}
                             </span>
                         @endif
                         @if($order->location_type === 'offsite')
@@ -105,13 +108,20 @@
                         </button>
                     </form>
                 @elseif($order->status === 'working')
-                    <form method="POST" action="{{ route('teknisi.timer', $order) }}">
-                        @csrf
-                        <input type="hidden" name="action" value="pause">
-                        <button class="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-bold text-amber-950 transition hover:bg-amber-500 active:scale-[.98]">
+                    @if($open)
+                        <button type="button" onclick="document.getElementById('pause-{{ $order->id }}').classList.toggle('hidden')"
+                                class="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-4 py-2.5 text-sm font-bold text-amber-950 transition hover:bg-amber-500 active:scale-[.98]">
                             <i data-lucide="pause" class="h-4 w-4"></i> Jeda Timer
                         </button>
-                    </form>
+                    @else
+                        <form method="POST" action="{{ route('teknisi.timer', $order) }}">
+                            @csrf
+                            <input type="hidden" name="action" value="start">
+                            <button class="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-400 px-4 py-2.5 text-sm font-bold text-sky-950 transition hover:bg-sky-500 active:scale-[.98]">
+                                <i data-lucide="play" class="h-4 w-4"></i> Lanjutkan Timer
+                            </button>
+                        </form>
+                    @endif
                 @else
                     <div class="grid place-items-center rounded-xl bg-slate-100 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-wide text-slate-400">
                         Pengerjaan selesai
@@ -159,6 +169,63 @@
                     @endif
                 </form>
             @endif
+
+            @if($order->status === 'working' && $open)
+                <div id="pause-{{ $order->id }}" class="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 {{ $errors->has('pause_reason') ? '' : 'hidden' }}">
+                    <form method="POST" action="{{ route('teknisi.timer', $order) }}">
+                        @csrf
+                        <input type="hidden" name="action" value="pause">
+                        <label for="pause-reason-{{ $order->id }}" class="mb-1 block text-sm font-semibold text-amber-900">
+                            Jeda Timer — Alasan Jeda <span class="text-red-500">*</span>
+                        </label>
+                        <p class="mb-2 text-xs text-amber-700">Alasan jeda wajib diisi dan dicatat sebagai riwayat pengerjaan WO ini.</p>
+                        <div class="mb-2 flex flex-wrap gap-1.5">
+                            <button type="button"
+                                    data-reason="Menunggu konfirmasi dari konsumen."
+                                    class="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-amber-800 transition hover:bg-amber-100 active:scale-95">
+                                Menunggu konfirmasi konsumen
+                            </button>
+                            <button type="button"
+                                    data-reason="Sparepart tidak tersedia sehingga perlu dilakukan pembelian terlebih dahulu."
+                                    class="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-amber-800 transition hover:bg-amber-100 active:scale-95">
+                                Sparepart tidak tersedia
+                            </button>
+                            <button type="button" data-focus
+                                    class="rounded-lg border border-amber-200 bg-white px-2.5 py-1.5 text-[11px] font-bold text-amber-800 transition hover:bg-amber-100 active:scale-95">
+                                Alasan lainnya
+                            </button>
+                        </div>
+                        <textarea id="pause-reason-{{ $order->id }}" name="pause_reason" rows="2" required minlength="5" maxlength="500"
+                                  placeholder="Tulis alasan jeda sesuai kondisi pengerjaan..."
+                                  class="w-full rounded-xl border-amber-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200">{{ old('pause_reason') }}</textarea>
+                        <div class="mt-3 flex flex-wrap gap-2">
+                            <button class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[.98]">
+                                <i data-lucide="pause" class="h-4 w-4"></i> Konfirmasi Jeda Timer
+                            </button>
+                            <button type="button" onclick="document.getElementById('pause-{{ $order->id }}').classList.add('hidden')"
+                                    class="rounded-xl border border-amber-200 bg-white px-4 py-2.5 text-sm font-semibold text-amber-800 transition hover:bg-amber-100">
+                                Batal
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            @endif
+
+            @if($pauseLogs->isNotEmpty())
+                <div class="mt-4 rounded-2xl border border-amber-100 bg-amber-50/50 p-3.5">
+                    <div class="mb-1.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-700">
+                        <i data-lucide="history" class="h-3.5 w-3.5"></i> Riwayat Jeda Timer
+                    </div>
+                    <div class="space-y-1">
+                        @foreach($pauseLogs as $log)
+                            <div class="flex flex-wrap gap-2 text-xs text-amber-900">
+                                <span class="font-mono font-semibold">{{ optional($log->stopped_at)->format('d M H:i') }}</span>
+                                <span>{{ $log->pause_reason }}</span>
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
         </div>
     @empty
         <div class="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center text-slate-400">
@@ -169,6 +236,20 @@
 </div>
 
 <script>
+    document.querySelectorAll('[data-reason]').forEach(button => {
+        button.addEventListener('click', () => {
+            const textarea = button.closest('form').querySelector('textarea[name="pause_reason"]');
+            textarea.value = button.dataset.reason;
+            textarea.focus();
+        });
+    });
+    document.querySelectorAll('[data-focus]').forEach(button => {
+        button.addEventListener('click', () => {
+            const textarea = button.closest('form').querySelector('textarea[name="pause_reason"]');
+            textarea.focus();
+        });
+    });
+
     document.querySelectorAll('[data-timer]').forEach(el => {
         const closed = Number(el.dataset.closed || 0);
         const openStart = el.dataset.openStart ? Number(el.dataset.openStart) : null;

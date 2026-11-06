@@ -17,7 +17,17 @@
             Dibuat {{ $serviceOrder->created_at->format('d M Y H:i') }}
         </p>
     </div>
-    <span class="rounded-full px-3.5 py-1.5 text-sm font-semibold {{ $serviceOrder->statusColor() }}">{{ $serviceOrder->statusLabel() }}</span>
+    <div class="flex flex-wrap items-center gap-2">
+        <a href="{{ route('sa.print.estimate', $serviceOrder) }}" target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[.98]">
+            <i data-lucide="printer" class="h-4 w-4"></i> Cetak Estimasi
+        </a>
+        <span class="rounded-full px-3.5 py-1.5 text-sm font-semibold {{ $serviceOrder->statusColor() }}">{{ $serviceOrder->statusLabel() }}</span>
+    </div>
+</div>
+
+<div class="mt-5">
+    @include('partials.service-flow', ['order' => $serviceOrder])
 </div>
 
 <div class="mt-5 grid gap-5 lg:grid-cols-3">
@@ -55,6 +65,24 @@
                     <div class="text-xs font-bold uppercase tracking-wide text-slate-400">Keluhan</div>
                     <p class="mt-1 text-slate-700">{{ $serviceOrder->customer_complaint }}</p>
                 </div>
+
+                @if($serviceOrder->requestedServiceLabels($pricelistNames) !== [])
+                    <div class="mt-3">
+                        <div class="text-xs font-bold uppercase tracking-wide text-slate-400">Layanan Diminta Customer</div>
+                        <div class="mt-1.5 flex flex-wrap gap-1.5">
+                            @foreach($serviceOrder->requestedServiceLabels($pricelistNames) as $serviceLabel)
+                                <span class="rounded-lg bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-700">{{ $serviceLabel }}</span>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                @if($serviceOrder->stnkUrl())
+                    <a href="{{ $serviceOrder->stnkUrl() }}" target="_blank" rel="noopener"
+                       class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold text-slate-600 transition hover:bg-slate-100 active:scale-[.98]">
+                        <i data-lucide="image" class="h-4 w-4"></i> Lihat Foto STNK
+                    </a>
+                @endif
 
                 @if($serviceOrder->sa_diagnosis)
                     <div class="mt-3">
@@ -127,14 +155,21 @@
         @if($serviceOrder->workLogs->isNotEmpty())
         <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
             <h2 class="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                <i data-lucide="timer" class="h-4 w-4"></i> Waktu Pengerjaan
+                <i data-lucide="timer" class="h-4 w-4"></i> Riwayat Waktu Pengerjaan
             </h2>
             @foreach($serviceOrder->workLogs as $log)
-                <div class="flex items-center justify-between border-b border-slate-50 py-1.5 text-sm last:border-0">
-                    <span class="text-slate-500">{{ $log->started_at->format('d M H:i') }}</span>
-                    <span class="font-semibold {{ $log->isOpen() ? 'text-indigo-600' : 'text-slate-700' }}">
-                        @if($log->isOpen()) ● Berjalan @else {{ gmdate('H:i:s', $log->duration_seconds) }} @endif
-                    </span>
+                <div class="border-b border-slate-50 py-1.5 last:border-0">
+                    <div class="flex items-center justify-between text-sm">
+                        <span class="text-slate-500">{{ $log->started_at->format('d M H:i') }}</span>
+                        <span class="font-semibold {{ $log->isOpen() ? 'text-indigo-600' : 'text-slate-700' }}">
+                            @if($log->isOpen()) ● Berjalan @else {{ gmdate('H:i:s', $log->duration_seconds) }} @endif
+                        </span>
+                    </div>
+                    @if($log->pause_reason)
+                        <div class="mt-1 rounded-lg bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800">
+                            Jeda: {{ $log->pause_reason }}
+                        </div>
+                    @endif
                 </div>
             @endforeach
             <div class="mt-2 flex justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold">
@@ -269,17 +304,20 @@
             </div>
         @endif
 
-        {{-- Aksi persetujuan / invoice --}}
+        {{-- Aksi persetujuan / pemeriksaan akhir / invoice --}}
         @if($serviceOrder->status === 'waiting_approval')
             <div class="rounded-3xl border border-amber-200 bg-amber-50 p-5">
                 <h3 class="flex items-center gap-2 font-bold text-amber-900">
-                    <i data-lucide="hourglass" class="h-4 w-4"></i> Menunggu Persetujuan Customer
+                    <i data-lucide="hourglass" class="h-4 w-4"></i> Tahap 1 — Menunggu Persetujuan Estimasi
                 </h3>
-                <p class="mt-1 text-sm text-amber-700">Tombol di bawah mensimulasikan persetujuan customer atas lembar estimasi.</p>
+                <p class="mt-1 text-sm text-amber-700">
+                    Customer menyetujui jenis pekerjaan, sparepart, dan estimasi biaya. Customer dapat menyetujui dari portalnya,
+                    atau SA mencatat persetujuan yang disampaikan langsung.
+                </p>
                 <form method="POST" action="{{ route('sa.approve', $serviceOrder) }}" class="mt-3">
                     @csrf
                     <button class="inline-flex items-center gap-2 rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-bold text-amber-950 transition hover:bg-amber-500 active:scale-[.98]">
-                        <i data-lucide="check-check" class="h-4 w-4"></i> Simulasikan Persetujuan Customer
+                        <i data-lucide="check-check" class="h-4 w-4"></i> Catat Persetujuan Estimasi Customer
                     </button>
                 </form>
             </div>
@@ -288,13 +326,60 @@
         @if($serviceOrder->status === 'completed')
             <div class="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
                 <h3 class="flex items-center gap-2 font-bold text-emerald-900">
-                    <i data-lucide="badge-check" class="h-4 w-4"></i> Pengerjaan Selesai
+                    <i data-lucide="clipboard-check" class="h-4 w-4"></i> Tahap 8 — Pemeriksaan Akhir SA
                 </h3>
-                <p class="mt-1 text-sm text-emerald-700">Terbitkan invoice / kwitansi resmi untuk customer.</p>
+                <p class="mt-1 text-sm text-emerald-700">Cek hasil kerja mekanik, lalu teruskan ke customer untuk konfirmasi hasil.</p>
+                <form method="POST" action="{{ route('sa.finalCheck', $serviceOrder) }}" class="mt-3 space-y-2">
+                    @csrf
+                    <textarea name="final_check_notes" rows="3" required maxlength="2000"
+                              placeholder="Hasil pemeriksaan akhir: kondisi part terpasang, tes jalan, kebersihan kendaraan, dsb."
+                              class="w-full rounded-xl border-emerald-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200">{{ old('final_check_notes') }}</textarea>
+                    <button class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 active:scale-[.98]">
+                        <i data-lucide="badge-check" class="h-4 w-4"></i> Simpan &amp; Minta Konfirmasi Customer
+                    </button>
+                </form>
+            </div>
+        @endif
+
+        @if($serviceOrder->status === 'waiting_confirmation')
+            <div class="rounded-3xl border border-teal-200 bg-teal-50 p-5">
+                <h3 class="flex items-center gap-2 font-bold text-teal-900">
+                    <i data-lucide="badge-check" class="h-4 w-4"></i> Tahap 9 — Menunggu Konfirmasi Hasil Customer
+                </h3>
+                @if($serviceOrder->final_check_at)
+                    <p class="mt-1 text-sm text-teal-700">
+                        Pemeriksaan akhir SA {{ $serviceOrder->final_check_at->format('d M Y H:i') }}: {{ $serviceOrder->final_check_notes }}
+                    </p>
+                @endif
+                <p class="mt-1 text-sm text-teal-700">
+                    Customer mengonfirmasi hasil pengerjaan sudah sesuai sebelum invoice diterbitkan — dari portal customer
+                    atau dicatat SA berdasarkan konfirmasi langsung.
+                </p>
+                <form method="POST" action="{{ route('sa.confirm', $serviceOrder) }}" class="mt-3 space-y-2">
+                    @csrf
+                    <input type="text" name="result_confirmation_notes" maxlength="500"
+                           placeholder="Catatan konfirmasi customer (opsional)"
+                           class="w-full rounded-xl border-teal-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-200">
+                    <button class="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-teal-700 active:scale-[.98]">
+                        <i data-lucide="check-check" class="h-4 w-4"></i> Catat Konfirmasi Customer
+                    </button>
+                </form>
+            </div>
+        @endif
+
+        @if($serviceOrder->status === 'confirmed')
+            <div class="rounded-3xl border border-emerald-200 bg-emerald-50 p-5">
+                <h3 class="flex items-center gap-2 font-bold text-emerald-900">
+                    <i data-lucide="receipt-text" class="h-4 w-4"></i> Tahap 10 — Siap Menerbitkan Invoice
+                </h3>
+                <p class="mt-1 text-sm text-emerald-700">
+                    Hasil pengerjaan disetujui customer{{ $serviceOrder->result_confirmed_at ? ' pada '.$serviceOrder->result_confirmed_at->format('d M Y H:i') : '' }}.
+                    Terbitkan invoice / kwitansi resmi untuk customer.
+                </p>
                 <form method="POST" action="{{ route('sa.invoice', $serviceOrder) }}" class="mt-3">
                     @csrf
                     <button class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 active:scale-[.98]">
-                        <i data-lucide="receipt-text" class="h-4 w-4"></i> Terbitkan Invoice / Kwitansi
+                        <i data-lucide="receipt" class="h-4 w-4"></i> Terbitkan Invoice / Kwitansi
                     </button>
                 </form>
             </div>

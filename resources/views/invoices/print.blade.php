@@ -10,20 +10,26 @@
             .no-print { display: none !important; }
             body { background: white !important; }
             .print-card { box-shadow: none !important; border: none !important; }
+            body.paper-narrow .print-card {
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 4mm !important;
+                font-size: 11px !important;
+            }
+            body.paper-narrow .print-card [class*="grid-cols-"] {
+                grid-template-columns: 1fr !important;
+            }
+            body.paper-narrow .print-card .flex {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+            }
+            body.paper-narrow .print-optional { display: none !important; }
         }
     </style>
 </head>
 <body class="min-h-screen bg-slate-100 p-4 sm:p-8">
 
-<div class="no-print mx-auto mb-4 flex max-w-3xl flex-wrap items-center justify-between gap-2">
-    <a href="{{ url()->previous() }}" class="text-sm font-medium text-slate-500 hover:text-slate-700">← Kembali</a>
-    <div class="flex gap-2">
-        <a href="{{ route('dashboard') }}" class="rounded-xl bg-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-300">Dashboard</a>
-        <button onclick="window.print()" class="rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">
-            🖨 Cetak / Simpan PDF
-        </button>
-    </div>
-</div>
+@include('partials.print-toolbar')
 
 <div class="print-card mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
 

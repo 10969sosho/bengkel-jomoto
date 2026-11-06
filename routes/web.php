@@ -28,7 +28,10 @@ Route::middleware('role:sa')->prefix('sa')->name('sa.')->group(function () {
     Route::post('/wo/{serviceOrder}/assign', [SaController::class, 'assign'])->name('assign');
     Route::post('/wo/{serviceOrder}/estimate', [SaController::class, 'estimate'])->name('estimate');
     Route::post('/wo/{serviceOrder}/approve', [SaController::class, 'approve'])->name('approve');
+    Route::post('/wo/{serviceOrder}/final-check', [SaController::class, 'finalCheck'])->name('finalCheck');
+    Route::post('/wo/{serviceOrder}/confirm', [SaController::class, 'confirmResult'])->name('confirm');
     Route::post('/wo/{serviceOrder}/invoice', [SaController::class, 'issueInvoice'])->name('invoice');
+    Route::get('/wo/{serviceOrder}/print-estimate', [SaController::class, 'printEstimate'])->name('print.estimate');
     Route::post('/invoices/{invoice}/pay', [InvoiceController::class, 'pay'])->name('invoices.pay');
 });
 
@@ -44,6 +47,8 @@ Route::middleware('role:customer')->prefix('customer')->name('customer.')->group
     Route::get('/', [CustomerController::class, 'index'])->name('index');
     Route::post('/vehicles', [CustomerController::class, 'storeVehicle'])->name('vehicles.store');
     Route::post('/service-orders', [CustomerController::class, 'storeOrder'])->name('orders.store');
+    Route::post('/service-orders/{serviceOrder}/approve', [CustomerController::class, 'approveEstimate'])->name('orders.approve');
+    Route::post('/service-orders/{serviceOrder}/confirm', [CustomerController::class, 'confirmResult'])->name('orders.confirm');
 });
 
 Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {

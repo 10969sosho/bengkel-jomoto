@@ -112,6 +112,8 @@ class TeknisiController extends Controller
         $openLog = $serviceOrder->workLogs()->whereNull('stopped_at')->latest('id')->first();
 
         if ($action === 'start') {
+            $resuming = $openLog === null && $serviceOrder->status === 'working';
+
             if (! $openLog) {
                 WorkLog::create([
                     'service_order_id' => $serviceOrder->id,
@@ -124,16 +126,27 @@ class TeknisiController extends Controller
                 $serviceOrder->update(['status' => 'working']);
             }
 
-            return back()->with('success', 'Timer pengerjaan dimulai.');
+            return back()->with('success', $resuming
+                ? 'Timer dilanjutkan kembali.'
+                : 'Timer pengerjaan dimulai.');
         }
 
-        if ($action === 'pause' && $openLog) {
+        if ($action === 'pause') {
+            if (! $openLog) {
+                return back()->with('error', 'Timer sedang tidak berjalan, tidak ada yang bisa dijeda.');
+            }
+
+            $data = $request->validate([
+                'pause_reason' => ['required', 'string', 'min:5', 'max:500'],
+            ]);
+
             $openLog->update([
                 'stopped_at' => now(),
                 'duration_seconds' => $openLog->started_at->diffInSeconds(now()),
+                'pause_reason' => $data['pause_reason'],
             ]);
 
-            return back()->with('success', 'Timer dijeda.');
+            return back()->with('success', 'Timer dijeda. Alasan jeda dicatat dalam riwayat pengerjaan.');
         }
 
         return back();
@@ -186,7 +199,7 @@ class TeknisiController extends Controller
 
         $message = ! empty($data['payment_method'])
             ? "{$serviceOrder->wo_number} selesai dan pembayaran {$data['payment_method']} tercatat."
-            : "{$serviceOrder->wo_number} ditandai selesai. Menunggu SA menerbitkan invoice.";
+            : "{$serviceOrder->wo_number} ditandai selesai. Menunggu pemeriksaan akhir SA dan konfirmasi customer.";
 
         return redirect()->route('teknisi.index')
             ->with('success', $message);

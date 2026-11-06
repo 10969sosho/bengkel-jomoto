@@ -53,7 +53,7 @@
 
     <details class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
         <summary class="cursor-pointer font-bold text-slate-900">Booking servis baru</summary>
-        <form method="POST" action="{{ route('customer.orders.store') }}" class="mt-4 space-y-3">
+        <form method="POST" action="{{ route('customer.orders.store') }}" enctype="multipart/form-data" class="mt-4 space-y-3">
             @csrf
             <select name="vehicle_id" id="booking-vehicle" required class="w-full rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
                 <option value="">Pilih kendaraan</option>
@@ -75,6 +75,48 @@
                 <input type="number" min="0" name="visit_fee" value="50000" class="w-full rounded-lg border-lime-200 bg-white px-3 py-2 text-sm">
             </div>
             <textarea name="customer_complaint" required rows="2" placeholder="Keluhan motor" class="w-full rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"></textarea>
+
+            <div>
+                <label class="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Jenis Layanan / Servis yang Dibutuhkan <span class="text-red-500">*</span>
+                </label>
+                <div class="grid gap-2 sm:grid-cols-2">
+                    @foreach($pricelists->where('is_active', true)->groupBy('category') as $category => $rows)
+                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-2.5 sm:col-span-2">
+                            <div class="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ $rows->first()->categoryLabel() }}</div>
+                            <div class="grid gap-1.5 sm:grid-cols-2">
+                                @foreach($rows as $pricelist)
+                                    <label class="flex cursor-pointer items-start gap-2 rounded-lg bg-white px-2.5 py-2 text-xs text-slate-700 transition hover:border-lime-300 hover:ring-1 hover:ring-lime-200">
+                                        <input type="checkbox" name="requested_services[]" value="{{ $pricelist->id }}"
+                                               @checked(in_array((string) $pricelist->id, array_map('strval', old('requested_services', []))))
+                                               class="mt-0.5 h-4 w-4 rounded border-slate-300 text-lime-500 focus:ring-lime-400">
+                                        <span class="min-w-0">
+                                            <span class="block font-semibold text-slate-800">{{ $pricelist->service_name }}</span>
+                                            <span class="text-slate-400">Rp {{ number_format($pricelist->price) }}</span>
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+                @error('requested_services')
+                    <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+
+            <div>
+                <label class="mb-1.5 block text-sm font-semibold text-slate-700">
+                    Foto STNK Kendaraan <span class="text-red-500">*</span>
+                </label>
+                <input type="file" name="stnk_photo" accept="image/png,image/jpeg,image/webp" required
+                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-lime-300">
+                <p class="mt-1 text-[11px] text-slate-400">Format JPG/PNG/WEBP, maksimal 5 MB. Data pendukung untuk diproses Service Advisor.</p>
+                @error('stnk_photo')
+                    <p class="mt-1 text-xs font-semibold text-red-500">{{ $message }}</p>
+                @enderror
+            </div>
+
             <button class="w-full rounded-xl bg-lime-300 px-4 py-2.5 text-sm font-bold text-black">Kirim Booking</button>
         </form>
     </details>
@@ -105,6 +147,20 @@
                         </div>
                     @endif
                     <p class="mt-1 max-w-2xl text-sm text-slate-500">“{{ $order->customer_complaint }}”</p>
+
+                    @if($order->requestedServiceLabels($pricelistNames) !== [])
+                        <div class="mt-2 flex flex-wrap gap-1.5">
+                            @foreach($order->requestedServiceLabels($pricelistNames) as $serviceLabel)
+                                <span class="rounded-lg bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-700">{{ $serviceLabel }}</span>
+                            @endforeach
+                        </div>
+                    @endif
+                    @if($order->stnkUrl())
+                        <a href="{{ $order->stnkUrl() }}" target="_blank" rel="noopener"
+                           class="mt-2 inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 underline decoration-dotted transition hover:text-slate-800">
+                            <i data-lucide="image" class="h-3.5 w-3.5"></i> Lihat Foto STNK
+                        </a>
+                    @endif
                 </div>
                 <div class="rounded-2xl bg-slate-50 px-4 py-3 text-right text-sm">
                     <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Teknisi</div>
@@ -115,7 +171,11 @@
                 </div>
             </div>
 
-            <div class="mt-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+            <div class="mt-4">
+                @include('partials.service-flow', ['order' => $order])
+            </div>
+
+            <div class="mt-3 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
                 <div class="mb-2 flex justify-between text-xs font-bold text-slate-500">
                     <span>Progres Pengerjaan</span>
                     <span class="rounded-full bg-slate-900 px-2 py-0.5 text-lime-300">{{ $progress }}%</span>
@@ -124,15 +184,106 @@
                     <div class="h-full rounded-full bg-gradient-to-r from-lime-300 to-lime-500 transition-all duration-700"
                          style="width: {{ $progress }}%"></div>
                 </div>
-                <div class="mt-2.5 flex justify-between text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                <div class="mt-2.5 flex flex-wrap justify-between gap-x-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
                     <span class="{{ $progress >= 10 ? 'text-lime-600' : '' }}">Terdaftar</span>
                     <span class="{{ $progress >= 35 ? 'text-lime-600' : '' }}">Estimasi</span>
                     <span class="{{ $progress >= 50 ? 'text-lime-600' : '' }}">Disetujui</span>
                     <span class="{{ $progress >= 70 ? 'text-lime-600' : '' }}">Dikerjakan</span>
-                    <span class="{{ $progress >= 90 ? 'text-lime-600' : '' }}">Selesai</span>
+                    <span class="{{ $progress >= 85 ? 'text-lime-600' : '' }}">Selesai</span>
+                    <span class="{{ $progress >= 90 ? 'text-lime-600' : '' }}">Konfirmasi</span>
                     <span class="{{ $progress >= 100 ? 'text-lime-600' : '' }}">Invoice</span>
                 </div>
             </div>
+
+            @if($order->status === 'waiting_approval')
+                <div class="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="grid h-7 w-7 place-items-center rounded-lg bg-amber-400 text-amber-950">
+                            <i data-lucide="file-check-2" class="h-4 w-4"></i>
+                        </span>
+                        <h4 class="font-bold text-amber-900">Persetujuan Estimasi · Tahap 1 dari 2</h4>
+                    </div>
+                    <p class="mt-1 text-xs text-amber-700">Setujui jenis pekerjaan, sparepart, dan estimasi biaya sebelum mekanik mulai bekerja.</p>
+
+                    <div class="mt-3 overflow-x-auto rounded-xl bg-white">
+                        <table class="w-full text-sm">
+                            <thead class="text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
+                                <tr>
+                                    <th class="px-3 py-2">Item</th>
+                                    <th class="px-3 py-2 text-center">Qty</th>
+                                    <th class="px-3 py-2 text-right">Jumlah</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                @forelse($order->items as $item)
+                                    <tr>
+                                        <td class="px-3 py-2">
+                                            {{ $item->item_name }}
+                                            <span class="text-xs text-slate-400">({{ $item->typeLabel() }})</span>
+                                            @if($item->is_free)
+                                                <div class="text-xs text-emerald-600">GRATIS — {{ $item->free_reason }}</div>
+                                            @endif
+                                        </td>
+                                        <td class="px-3 py-2 text-center">{{ $item->quantity }}</td>
+                                        <td class="px-3 py-2 text-right font-semibold">
+                                            {{ $item->is_free ? 'Rp 0' : 'Rp '.number_format($item->subtotal) }}
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="3" class="px-3 py-4 text-center text-xs text-slate-400">Estimasi masih disiapkan oleh SA.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <form method="POST" action="{{ route('customer.orders.approve', $order) }}" class="mt-3">
+                        @csrf
+                        <button class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[.98]">
+                            <i data-lucide="check-check" class="h-4 w-4"></i> Setujui Estimasi &amp; Biaya
+                        </button>
+                    </form>
+                </div>
+            @endif
+
+            @if($order->status === 'waiting_confirmation')
+                <div class="mt-4 rounded-2xl border border-teal-200 bg-teal-50 p-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="grid h-7 w-7 place-items-center rounded-lg bg-teal-500 text-white">
+                            <i data-lucide="badge-check" class="h-4 w-4"></i>
+                        </span>
+                        <h4 class="font-bold text-teal-900">Persetujuan Hasil Pengerjaan · Tahap 2 dari 2</h4>
+                    </div>
+                    <p class="mt-1 text-xs text-teal-700">Pengerjaan sudah diperiksa SA. Konfirmasi bahwa hasil servis sudah sesuai sebelum invoice diterbitkan.</p>
+
+                    @if($order->final_check_at)
+                        <div class="mt-3 rounded-xl bg-white p-3 text-xs text-slate-600">
+                            <div class="font-bold text-slate-800">Pemeriksaan Akhir SA · {{ $order->final_check_at->format('d M Y H:i') }}</div>
+                            <p class="mt-1">{{ $order->final_check_notes }}</p>
+                        </div>
+                    @endif
+
+                    <form method="POST" action="{{ route('customer.orders.confirm', $order) }}" class="mt-3 space-y-2">
+                        @csrf
+                        <textarea name="confirmation_note" rows="2" required maxlength="500"
+                                  placeholder="Contoh: hasil pengerjaan sudah sesuai dan disetujui."
+                                  class="w-full rounded-xl border-teal-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-teal-400 focus:ring-2 focus:ring-teal-200">{{ old('confirmation_note') }}</textarea>
+                        <button class="inline-flex items-center gap-2 rounded-xl bg-teal-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-teal-700 active:scale-[.98]">
+                            <i data-lucide="check-check" class="h-4 w-4"></i> Konfirmasi Hasil Sesuai
+                        </button>
+                    </form>
+                </div>
+            @endif
+
+            @if($order->status === 'confirmed')
+                <div class="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-900">
+                    Hasil pengerjaan sudah dikonfirmasi{{ $order->result_confirmed_at ? ' pada '.$order->result_confirmed_at->format('d M Y H:i') : '' }} — SA akan menerbitkan invoice.
+                    @if($order->result_confirmation_notes)
+                        <div class="mt-1 text-xs text-cyan-700">Catatan: {{ $order->result_confirmation_notes }}</div>
+                    @endif
+                </div>
+            @endif
         </div>
     @empty
         <div class="rounded-3xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-400">

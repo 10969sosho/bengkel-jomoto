@@ -28,6 +28,7 @@ class SaController extends Controller
             'draft' => $orders->where('status', 'draft')->count(),
             'waiting' => $orders->where('status', 'waiting_approval')->count(),
             'working' => $orders->where('status', 'working')->count(),
+            'confirmation' => $orders->filter(fn (ServiceOrder $order): bool => in_array($order->status, ['completed', 'waiting_confirmation'], true))->count(),
             'unpaid' => $orders->filter(fn (ServiceOrder $order): bool => $order->status === 'invoiced'
                 && $order->invoice?->payment_status === 'unpaid')->count(),
         ];
@@ -36,8 +37,9 @@ class SaController extends Controller
             ->whereNull('sa_id')
             ->orderByDesc('id')
             ->get();
+        $pricelistNames = ServicePricelist::pluck('service_name', 'id')->all();
 
-        return view('sa.dashboard', compact('orders', 'stats', 'bookings'));
+        return view('sa.dashboard', compact('orders', 'stats', 'bookings', 'pricelistNames'));
     }
 
     public function create(): View
@@ -156,7 +158,8 @@ class SaController extends Controller
             }
         }
 
-        return view('sa.show', compact('serviceOrder', 'pricelists', 'subMaterials', 'technicians', 'suggestedItems'));
+        return view('sa.show', compact('serviceOrder', 'pricelists', 'subMaterials', 'technicians', 'suggestedItems'))
+            ->with('pricelistNames', ServicePricelist::pluck('service_name', 'id')->all());
     }
 
     public function storeVehicle(Request $request, User $customer): RedirectResponse
@@ -337,15 +340,56 @@ class SaController extends Controller
             return back()->with('error', 'Hanya WO berstatus menunggu persetujuan yang bisa disetujui.');
         }
 
-        $serviceOrder->update(['status' => 'approved']);
+        $serviceOrder->update([
+            'status' => 'approved',
+            'estimate_approved_at' => now(),
+        ]);
 
         return back()->with('success', 'Estimasi disetujui. WO siap dikerjakan teknisi.');
     }
 
+    public function finalCheck(Request $request, ServiceOrder $serviceOrder): RedirectResponse
+    {
+        if ($serviceOrder->status !== 'completed') {
+            return back()->with('error', 'Pemeriksaan akhir hanya bisa dilakukan setelah pengerjaan teknisi selesai.');
+        }
+
+        $data = $request->validate([
+            'final_check_notes' => ['required', 'string', 'max:2000'],
+        ]);
+
+        $serviceOrder->update([
+            'final_check_at' => now(),
+            'final_check_notes' => $data['final_check_notes'],
+            'status' => 'waiting_confirmation',
+        ]);
+
+        return back()->with('success', "Pemeriksaan akhir {$serviceOrder->wo_number} selesai. Menunggu konfirmasi customer atas hasil pengerjaan.");
+    }
+
+    public function confirmResult(Request $request, ServiceOrder $serviceOrder): RedirectResponse
+    {
+        if ($serviceOrder->status !== 'waiting_confirmation') {
+            return back()->with('error', 'Hanya hasil pengerjaan yang sudah diperiksa SA yang bisa dikonfirmasi.');
+        }
+
+        $data = $request->validate([
+            'result_confirmation_notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $serviceOrder->update([
+            'status' => 'confirmed',
+            'result_confirmed_at' => now(),
+            'result_confirmation_notes' => $data['result_confirmation_notes'] ?? 'Dikonfirmasi langsung oleh customer kepada SA.',
+        ]);
+
+        return back()->with('success', "Customer menyetujui hasil pengerjaan {$serviceOrder->wo_number}. Invoice siap diterbitkan.");
+    }
+
     public function issueInvoice(ServiceOrder $serviceOrder): RedirectResponse
     {
-        if ($serviceOrder->status !== 'completed' || $serviceOrder->invoice) {
-            return back()->with('error', 'Invoice hanya bisa diterbitkan untuk WO yang sudah selesai.');
+        if ($serviceOrder->status !== 'confirmed' || $serviceOrder->invoice) {
+            return back()->with('error', 'Invoice hanya bisa diterbitkan setelah customer mengonfirmasi hasil pengerjaan.');
         }
 
         $invoice = Invoice::createFromOrder($serviceOrder);
@@ -353,5 +397,15 @@ class SaController extends Controller
 
         return redirect()->route('invoices.print', $invoice)
             ->with('success', "Invoice {$invoice->invoice_number} berhasil diterbitkan.");
+    }
+
+    public function printEstimate(ServiceOrder $serviceOrder): View
+    {
+        $serviceOrder->load(['customer', 'vehicle', 'technician', 'sa', 'items', 'inspection']);
+
+        return view('sa.print-estimate', [
+            'serviceOrder' => $serviceOrder,
+            'requestedServices' => $serviceOrder->requestedServiceLabels(ServicePricelist::pluck('service_name', 'id')->all()),
+        ]);
     }
 }

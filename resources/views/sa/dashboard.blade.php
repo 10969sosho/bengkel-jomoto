@@ -16,12 +16,13 @@
     </a>
 </div>
 
-<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+<div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
     @php($cards = [
         ['Total WO', $stats['total'], 'text-slate-900', 'bg-slate-100', 'clipboard-list'],
         ['Antrian Baru', $stats['draft'], 'text-slate-700', 'bg-zinc-100', 'inbox'],
         ['Menunggu Persetujuan', $stats['waiting'], 'text-amber-600', 'bg-amber-50', 'clock'],
         ['Sedang Dikerjakan', $stats['working'], 'text-indigo-600', 'bg-indigo-50', 'hammer'],
+        ['Menunggu Konfirmasi', $stats['confirmation'], 'text-orange-600', 'bg-orange-50', 'badge-check'],
         ['Belum Dibayar', $stats['unpaid'], 'text-red-500', 'bg-red-50', 'credit-card'],
     ])
     @foreach($cards as [$label, $value, $color, $bg, $icon])
@@ -50,8 +51,10 @@
             <thead class="text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
                 <tr>
                     <th class="px-5 py-3">Customer / Motor</th>
+                    <th class="px-5 py-3">Layanan Diminta</th>
                     <th class="px-5 py-3">Keluhan</th>
                     <th class="px-5 py-3">KM / Lokasi</th>
+                    <th class="px-5 py-3">Data Pendukung</th>
                     <th class="px-5 py-3 text-right">Aksi</th>
                 </tr>
             </thead>
@@ -62,10 +65,29 @@
                             <div class="font-semibold text-slate-800">{{ $booking->customer?->name }}</div>
                             <div class="text-xs text-slate-500">{{ $booking->vehicle?->fullName() }} · {{ $booking->vehicle?->plate_number }}</div>
                         </td>
+                        <td class="px-5 py-3.5">
+                            <div class="flex flex-wrap gap-1.5">
+                                @forelse($booking->requestedServiceLabels($pricelistNames) as $serviceLabel)
+                                    <span class="rounded-lg bg-sky-50 px-2 py-1 text-[11px] font-semibold text-sky-700">{{ $serviceLabel }}</span>
+                                @empty
+                                    <span class="text-xs text-slate-300">—</span>
+                                @endforelse
+                            </div>
+                        </td>
                         <td class="max-w-sm px-5 py-3.5 text-slate-600">{{ $booking->customer_complaint }}</td>
                         <td class="px-5 py-3.5 text-slate-600">
                             {{ number_format($booking->odometer ?? $booking->vehicle?->last_odometer ?? 0) }} KM
                             <div class="text-xs text-slate-400">{{ $booking->location_type === 'offsite' ? 'Home Service' : 'Di Bengkel' }}</div>
+                        </td>
+                        <td class="px-5 py-3.5">
+                            @if($booking->stnkUrl())
+                                <a href="{{ $booking->stnkUrl() }}" target="_blank" rel="noopener"
+                                   class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-bold text-slate-600 transition hover:bg-slate-100">
+                                    <i data-lucide="image" class="h-3.5 w-3.5"></i> Foto STNK
+                                </a>
+                            @else
+                                <span class="text-xs text-slate-300">—</span>
+                            @endif
                         </td>
                         <td class="px-5 py-3.5 text-right">
                             <a href="{{ route('sa.create', ['booking_id' => $booking->id]) }}" class="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-amber-600">
@@ -74,7 +96,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="4" class="px-5 py-8 text-center text-slate-400">Tidak ada booking yang menunggu diproses.</td></tr>
+                    <tr><td colspan="6" class="px-5 py-8 text-center text-slate-400">Tidak ada booking yang menunggu diproses.</td></tr>
                 @endforelse
             </tbody>
         </table>

@@ -59,7 +59,7 @@ class AdminController extends Controller
             'total' => (int) ($paymentTotals[$method] ?? 0),
         ]);
 
-        $completedOrders = ServiceOrder::query()->where('status', 'completed');
+        $completedOrders = ServiceOrder::query()->whereNotNull('actual_completion');
         $this->applyPeriod($completedOrders, $period, 'actual_completion');
         $completedByTechnician = (clone $completedOrders)->selectRaw('technician_id, COUNT(*) as total')
             ->groupBy('technician_id')->pluck('total', 'technician_id');

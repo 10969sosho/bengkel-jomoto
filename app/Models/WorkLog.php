@@ -14,6 +14,7 @@ class WorkLog extends Model
         'stopped_at',
         'duration_seconds',
         'notes',
+        'pause_reason',
     ];
 
     protected function casts(): array
