@@ -135,7 +135,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="4" class="py-4 text-center text-slate-400">Estimasi belum diisi Service Advisor.</td>
+                    <td colspan="4" class="py-4 text-center text-slate-400">Estimasi belum diisi Sales Adviser.</td>
                 </tr>
             @endforelse
             @if($serviceOrder->visit_fee > 0)
@@ -194,13 +194,13 @@
     <div class="mt-6 flex flex-wrap items-end justify-between gap-4 border-t border-slate-100 pt-4 text-sm">
         <div class="text-xs text-slate-400">
             Estimasi ini bersifat perkiraan dan dapat berubah setelah pemeriksaan lebih lanjut.<br>
-            Disusun oleh: <b class="text-slate-600">{{ $serviceOrder->sa?->name ?? 'Service Adviser' }}</b> · Jomoto Center
+            Disusun oleh: <b class="text-slate-600">{{ $serviceOrder->sa?->name ?? 'Sales Adviser' }}</b> · Jomoto Center
         </div>
         <div class="text-center">
             <div class="text-xs font-bold uppercase tracking-wide text-slate-400">Hormat kami,</div>
             <div class="mt-10 inline-block border-t border-slate-400 pt-1 font-semibold text-slate-700">
-                {{ $serviceOrder->sa?->name ?? 'Service Adviser' }}
-                <div class="text-xs font-normal text-slate-400">Service Adviser · Jomoto Center</div>
+                {{ $serviceOrder->sa?->name ?? 'Sales Adviser' }}
+                <div class="text-xs font-normal text-slate-400">Sales Adviser · Jomoto Center</div>
             </div>
         </div>
     </div>

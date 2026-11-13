@@ -25,7 +25,7 @@ class ServiceFlowApprovalTest extends TestCase
         ]);
 
         // Tahap 1 — customer menyetujui estimasi dari portal.
-        $this->withSession(['demo_user_id' => $customer->id])
+        $this->actingAs($customer)
             ->post(route('customer.orders.approve', $order))
             ->assertSessionHas('success');
         $order->refresh();
@@ -33,48 +33,49 @@ class ServiceFlowApprovalTest extends TestCase
         $this->assertNotNull($order->estimate_approved_at);
 
         // Tahap 7 — teknisi mengerjakan dan menyelesaikan pekerjaan.
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->inspect($order);
+        $this->actingAs($technician)
             ->post(route('teknisi.timer', $order), ['action' => 'start']);
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->actingAs($technician)
             ->post(route('teknisi.complete', $order), ['notes' => 'Ganti kampas rem depan'])
             ->assertSessionHas('success');
         $this->assertSame('completed', $order->fresh()->status);
 
         // Tahap 10 — invoice belum boleh terbit sebelum pemeriksaan akhir & konfirmasi customer.
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->post(route('sa.invoice', $order))
             ->assertSessionHas('error', 'Invoice hanya bisa diterbitkan setelah customer mengonfirmasi hasil pengerjaan.');
         $this->assertNull($order->fresh()->invoice);
 
         // Tahap 8 — pemeriksaan akhir SA wajib berisi catatan hasil.
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->post(route('sa.finalCheck', $order))
             ->assertSessionHasErrors('final_check_notes');
 
         $checkNotes = 'Kampas rem terpasang, tes jalan normal, tidak ada kebocoran.';
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->post(route('sa.finalCheck', $order), ['final_check_notes' => $checkNotes])
             ->assertSessionHas('success');
         $order->refresh();
         $this->assertSame('waiting_confirmation', $order->status);
         $this->assertNotNull($order->final_check_at);
 
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->post(route('sa.invoice', $order))
             ->assertSessionHas('error');
 
         // Tahap 9 — customer melihat hasil pemeriksaan lalu mengonfirmasi hasil pengerjaan.
-        $this->withSession(['demo_user_id' => $customer->id])
+        $this->actingAs($customer)
             ->get(route('customer.index'))
             ->assertOk()
             ->assertSee('Persetujuan Hasil Pengerjaan')
             ->assertSee($checkNotes);
 
-        $this->withSession(['demo_user_id' => $customer->id])
+        $this->actingAs($customer)
             ->post(route('customer.orders.confirm', $order))
             ->assertSessionHasErrors('confirmation_note');
 
-        $this->withSession(['demo_user_id' => $customer->id])
+        $this->actingAs($customer)
             ->post(route('customer.orders.confirm', $order), [
                 'confirmation_note' => 'Hasil pengerjaan sudah sesuai dan disetujui.',
             ])
@@ -84,7 +85,7 @@ class ServiceFlowApprovalTest extends TestCase
         $this->assertNotNull($order->result_confirmed_at);
 
         // Tahap 10 — invoice akhirnya diterbitkan SA.
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->post(route('sa.invoice', $order))
             ->assertRedirectToRoute('invoices.print', $order->fresh()->invoice);
         $this->assertSame('invoiced', $order->fresh()->status);
@@ -98,14 +99,14 @@ class ServiceFlowApprovalTest extends TestCase
         $vehicle = $this->vehicle($customer);
         $order = $this->order($customer, $vehicle, $sa, $technician, 'WO-2611-0021');
 
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->post(route('sa.approve', $order))
             ->assertSessionHas('success');
         $this->assertSame('approved', $order->fresh()->status);
 
         $order->update(['status' => 'waiting_confirmation', 'final_check_at' => now(), 'final_check_notes' => 'Tes jalan aman.']);
 
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->post(route('sa.confirm', $order), ['result_confirmation_notes' => 'Customer setuju via WA.'])
             ->assertSessionHas('success');
 
@@ -141,7 +142,7 @@ class ServiceFlowApprovalTest extends TestCase
         $this->assertFalse($stages[9]['done'], 'Tahap Invoice belum selesai.');
         $this->assertSame(10, $order->fresh()->currentFlowStage());
 
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->get(route('sa.show', $order))
             ->assertOk()
             ->assertSee('Alur Servis')
@@ -157,10 +158,10 @@ class ServiceFlowApprovalTest extends TestCase
         $vehicle = $this->vehicle($owner);
         $order = $this->order($owner, $vehicle, $sa, $technician);
 
-        $this->withSession(['demo_user_id' => $intruder->id])
+        $this->actingAs($intruder)
             ->post(route('customer.orders.approve', $order))
             ->assertForbidden();
-        $this->withSession(['demo_user_id' => $intruder->id])
+        $this->actingAs($intruder)
             ->post(route('customer.orders.confirm', $order))
             ->assertForbidden();
         $this->assertSame('waiting_approval', $order->fresh()->status);
@@ -186,11 +187,25 @@ class ServiceFlowApprovalTest extends TestCase
 
     private function order(User $customer, Vehicle $vehicle, User $sa, User $technician, string $number = 'WO-2611-0001'): ServiceOrder
     {
-        return ServiceOrder::create([
+        $order = ServiceOrder::create([
             'wo_number' => $number, 'customer_id' => $customer->id, 'vehicle_id' => $vehicle->id,
             'sa_id' => $sa->id, 'technician_id' => $technician->id,
             'customer_complaint' => 'Rem depan bunyi', 'service_type' => 'regular',
             'location_type' => 'onsite', 'status' => 'waiting_approval',
         ]);
+
+        return $order;
+    }
+
+    /** WO yang sudah lolos pemeriksaan teknisi (syarat timer pengerjaan). */
+    private function inspect(ServiceOrder $order): ServiceOrder
+    {
+        $order->inspection()->create([
+            'technician_id' => $order->technician_id,
+            'checklist' => [['key' => 'pengereman', 'label' => 'Sistem Pengereman', 'status' => 'g']],
+            'findings' => 'Kampas rem depan tipis.',
+        ]);
+
+        return $order;
     }
 }

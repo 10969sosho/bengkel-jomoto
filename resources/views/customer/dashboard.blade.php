@@ -5,9 +5,21 @@
 @section('page_icon', 'bike')
 
 @section('content')
-<div class="mb-5">
-    <h1 class="text-xl font-bold text-slate-900">Halo, {{ explode(' ', $user->name)[0] }} 👋</h1>
-    <p class="text-sm text-slate-500">Pantau progress servis motor Anda, riwayat perawatan, dan unduh kwitansi.</p>
+<div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div>
+        <h1 class="text-xl font-bold text-slate-900">Halo, {{ explode(' ', $user->name)[0] }} 👋</h1>
+        <p class="text-sm text-slate-500">Pantau progress servis motor Anda, riwayat perawatan, dan unduh kwitansi.</p>
+    </div>
+    <div class="flex flex-wrap gap-2">
+        <a href="{{ route('customer.vehicles') }}"
+           class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[.98]">
+            <i data-lucide="bike" class="h-4 w-4"></i> Daftar Kendaraan
+        </a>
+        <a href="{{ route('customer.booking.create') }}"
+           class="inline-flex items-center gap-2 rounded-xl bg-lime-300 px-4 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-lime-400 active:scale-[.98]">
+            <i data-lucide="calendar-plus" class="h-4 w-4"></i> Booking Servis Baru
+        </a>
+    </div>
 </div>
 
 {{-- Motor saya --}}
@@ -35,91 +47,24 @@
     </div>
 </section>
 
-<section class="mb-6 grid gap-4 lg:grid-cols-2">
-    <details class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
-        <summary class="cursor-pointer font-bold text-slate-900">+ Daftarkan kendaraan baru</summary>
-        <form method="POST" action="{{ route('customer.vehicles.store') }}" class="mt-4 grid gap-3 sm:grid-cols-2">
-            @csrf
-            <input name="brand" required placeholder="Merk" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-            <input name="model" required placeholder="Model" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-            <input name="plate_number" required placeholder="Plat nomor" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-            <input name="engine_number" placeholder="Nomor mesin" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-            <input name="chassis_number" placeholder="Nomor rangka" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-            <select name="fuel_type" required class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"><option value="gasoline">Bensin</option><option value="electric">Listrik</option></select>
-            <input type="number" min="0" name="last_odometer" required placeholder="KM awal" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-            <button class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-lime-300 sm:col-span-2">Simpan Kendaraan</button>
-        </form>
-    </details>
-
-    <details class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
-        <summary class="cursor-pointer font-bold text-slate-900">Booking servis baru</summary>
-        <form method="POST" action="{{ route('customer.orders.store') }}" enctype="multipart/form-data" class="mt-4 space-y-3">
-            @csrf
-            <select name="vehicle_id" id="booking-vehicle" required class="w-full rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-                <option value="">Pilih kendaraan</option>
-                @foreach($vehicles as $vehicle)
-                    <option value="{{ $vehicle->id }}" data-odometer="{{ $vehicle->last_odometer }}" data-claimed="{{ $vehicle->serviceOrders->pluck('coupon_milestone')->join(',') }}">{{ $vehicle->fullName() }} · {{ $vehicle->plate_number }}</option>
-                @endforeach
-            </select>
-            <div class="grid gap-3 sm:grid-cols-2">
-                <input type="number" min="0" name="odometer" id="booking-odometer" required placeholder="KM saat ini" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-                <select name="location_type" id="booking-location" class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
-                    <option value="onsite">Service di Bengkel</option><option value="offsite">Service Panggilan (Home Service)</option>
-                </select>
-            </div>
-            <div id="booking-coupon" class="hidden rounded-xl border border-lime-200 bg-lime-50 p-3 text-sm font-bold text-lime-800"></div>
-            <div id="booking-home" class="hidden space-y-2 rounded-xl border border-lime-200 bg-lime-50 p-3">
-                <textarea name="offsite_address" id="booking-address" rows="2" placeholder="Alamat lengkap service" class="w-full rounded-lg border-lime-200 bg-white px-3 py-2 text-sm"></textarea>
-                <input name="location_notes" placeholder="Catatan patokan lokasi" class="w-full rounded-lg border-lime-200 bg-white px-3 py-2 text-sm">
-                <label class="block text-xs font-semibold text-lime-900">Biaya kunjungan (Rp)</label>
-                <input type="number" min="0" name="visit_fee" value="50000" class="w-full rounded-lg border-lime-200 bg-white px-3 py-2 text-sm">
-            </div>
-            <textarea name="customer_complaint" required rows="2" placeholder="Keluhan motor" class="w-full rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm"></textarea>
-
-            <div>
-                <label class="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Jenis Layanan / Servis yang Dibutuhkan <span class="text-red-500">*</span>
-                </label>
-                <div class="grid gap-2 sm:grid-cols-2">
-                    @foreach($pricelists->where('is_active', true)->groupBy('category') as $category => $rows)
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-2.5 sm:col-span-2">
-                            <div class="mb-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ $rows->first()->categoryLabel() }}</div>
-                            <div class="grid gap-1.5 sm:grid-cols-2">
-                                @foreach($rows as $pricelist)
-                                    <label class="flex cursor-pointer items-start gap-2 rounded-lg bg-white px-2.5 py-2 text-xs text-slate-700 transition hover:border-lime-300 hover:ring-1 hover:ring-lime-200">
-                                        <input type="checkbox" name="requested_services[]" value="{{ $pricelist->id }}"
-                                               @checked(in_array((string) $pricelist->id, array_map('strval', old('requested_services', []))))
-                                               class="mt-0.5 h-4 w-4 rounded border-slate-300 text-lime-500 focus:ring-lime-400">
-                                        <span class="min-w-0">
-                                            <span class="block font-semibold text-slate-800">{{ $pricelist->service_name }}</span>
-                                            <span class="text-slate-400">Rp {{ number_format($pricelist->price) }}</span>
-                                        </span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endforeach
-                </div>
-                @error('requested_services')
-                    <p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <div>
-                <label class="mb-1.5 block text-sm font-semibold text-slate-700">
-                    Foto STNK Kendaraan <span class="text-red-500">*</span>
-                </label>
-                <input type="file" name="stnk_photo" accept="image/png,image/jpeg,image/webp" required
-                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-lime-300">
-                <p class="mt-1 text-[11px] text-slate-400">Format JPG/PNG/WEBP, maksimal 5 MB. Data pendukung untuk diproses Service Advisor.</p>
-                @error('stnk_photo')
-                    <p class="mt-1 text-xs font-semibold text-red-500">{{ $message }}</p>
-                @enderror
-            </div>
-
-            <button class="w-full rounded-xl bg-lime-300 px-4 py-2.5 text-sm font-bold text-black">Kirim Booking</button>
-        </form>
-    </details>
+<section class="mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-dashed border-slate-300 bg-white p-5">
+        <div class="text-sm text-slate-500">
+            Kelola kendaraan dan booking servis lewat halaman khusus:
+            <b class="text-slate-700">Daftar Kendaraan</b> untuk mendaftarkan motor baru,
+            <b class="text-slate-700">Booking Servis</b> untuk mengirim permintaan servis.
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <a href="{{ route('customer.vehicles') }}"
+               class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-100 active:scale-95">
+                <i data-lucide="bike" class="h-3.5 w-3.5"></i> Daftar Kendaraan
+            </a>
+            <a href="{{ route('customer.booking.create') }}"
+               class="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-slate-700 active:scale-95">
+                <i data-lucide="calendar-plus" class="h-3.5 w-3.5"></i> Booking Servis
+            </a>
+        </div>
+    </div>
 </section>
 
 {{-- Progress servis aktif --}}
@@ -346,34 +291,4 @@
     </div>
 </section>
 
-<script>
-    const bookingVehicle = document.getElementById('booking-vehicle');
-    const bookingOdometer = document.getElementById('booking-odometer');
-    const bookingLocation = document.getElementById('booking-location');
-    const bookingHome = document.getElementById('booking-home');
-    const bookingAddress = document.getElementById('booking-address');
-    const bookingCoupon = document.getElementById('booking-coupon');
-    const updateCoupon = () => {
-        const km = Number(bookingOdometer.value);
-        const atpm = [1000, 4000, 7000].find(value => km >= value && km <= value + 500);
-        const jomoto = km >= 10000 ? Math.floor(km / 10000) * 10000 : null;
-        const candidate = atpm || (jomoto && km <= jomoto + 500 ? jomoto : null);
-        const claimed = (bookingVehicle.selectedOptions[0]?.dataset.claimed || '').split(',').map(Number);
-        const milestone = candidate && !claimed.includes(candidate) ? candidate : null;
-        bookingCoupon.classList.toggle('hidden', !milestone);
-        bookingCoupon.textContent = milestone ? (atpm
-            ? `Klaim Gratis ATPM ${milestone.toLocaleString('id-ID')} KM · oli, sparepart dasar & jasa gratis`
-            : `Klaim Gratis Jomoto ${milestone.toLocaleString('id-ID')} KM · jasa gratis, sparepart bayar`) : '';
-    };
-    bookingVehicle.addEventListener('change', () => {
-        bookingOdometer.value = bookingVehicle.selectedOptions[0]?.dataset.odometer || '';
-        updateCoupon();
-    });
-    bookingOdometer.addEventListener('input', updateCoupon);
-    bookingLocation.addEventListener('change', () => {
-        const offsite = bookingLocation.value === 'offsite';
-        bookingHome.classList.toggle('hidden', !offsite);
-        bookingAddress.required = offsite;
-    });
-</script>
 @endsection

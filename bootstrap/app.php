@@ -1,7 +1,6 @@
 <?php
 
 use App\Http\Middleware\ApiToken;
-use App\Http\Middleware\DemoUser;
 use App\Http\Middleware\RoleMiddleware;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,7 +15,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->web(append: [DemoUser::class]);
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'api.token' => ApiToken::class,

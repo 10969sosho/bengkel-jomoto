@@ -28,12 +28,12 @@ class ServiceAdviserWorkflowTest extends TestCase
             'odometer' => 1200, 'status' => 'draft',
         ]);
 
-        $this->withSession(['demo_user_id' => $sa->id])->get(route('sa.index'))
+        $this->actingAs($sa)->get(route('sa.index'))
             ->assertOk()->assertSee('Booking Service Masuk')->assertSee('Booking keluhan rem');
-        $this->withSession(['demo_user_id' => $sa->id])->get(route('sa.create', ['booking_id' => $booking->id]))
+        $this->actingAs($sa)->get(route('sa.create', ['booking_id' => $booking->id]))
             ->assertOk()->assertSee('Booking keluhan rem')->assertSee('value="1200"', false);
 
-        $response = $this->withSession(['demo_user_id' => $sa->id])->post(route('sa.store'), [
+        $response = $this->actingAs($sa)->post(route('sa.store'), [
             'booking_id' => $booking->id,
             'customer_id' => $customer->id,
             'vehicle_id' => $vehicle->id,
@@ -55,7 +55,7 @@ class ServiceAdviserWorkflowTest extends TestCase
         $this->assertSame(1, ServiceOrder::count());
         $this->assertSame(1250, $vehicle->fresh()->last_odometer);
 
-        $this->withSession(['demo_user_id' => $sa->id])->post(route('sa.store'), [
+        $this->actingAs($sa)->post(route('sa.store'), [
             'customer_id' => $customer->id,
             'vehicle_id' => $vehicle->id,
             'technician_id' => $technician->id,
@@ -70,25 +70,25 @@ class ServiceAdviserWorkflowTest extends TestCase
     {
         $sa = $this->user('Rina', 'sa');
 
-        $this->withSession(['demo_user_id' => $sa->id])->post(route('sa.customers.store'), [
+        $this->actingAs($sa)->post(route('sa.customers.store'), [
             'name' => 'Citra Customer', 'phone' => '0812345678', 'whatsapp' => '62812345678', 'email' => 'citra@example.test',
         ])->assertRedirect();
         $customer = User::where('email', 'citra@example.test')->firstOrFail();
         $this->assertSame('customer', $customer->role);
         $this->assertModelExists($customer);
 
-        $this->withSession(['demo_user_id' => $sa->id])->post(route('sa.vehicles.store', $customer), [
+        $this->actingAs($sa)->post(route('sa.vehicles.store', $customer), [
             'brand' => 'Honda', 'model' => 'Beat', 'plate_number' => 'B 1234 CD', 'year' => 2024,
             'engine_number' => 'ENG-1', 'chassis_number' => 'CHS-1', 'fuel_type' => 'gasoline', 'last_odometer' => 800,
         ])->assertRedirect();
         $vehicle = $customer->vehicles()->firstOrFail();
 
-        $this->withSession(['demo_user_id' => $sa->id])->put(route('sa.vehicles.update', $vehicle), [
+        $this->actingAs($sa)->put(route('sa.vehicles.update', $vehicle), [
             'brand' => 'Honda', 'model' => 'Beat Deluxe', 'plate_number' => 'B 1234 CD', 'year' => 2025,
             'engine_number' => 'ENG-2', 'chassis_number' => 'CHS-2', 'fuel_type' => 'gasoline', 'last_odometer' => 950,
         ])->assertRedirect();
 
-        $this->withSession(['demo_user_id' => $sa->id])->get(route('sa.customers.show', $customer))
+        $this->actingAs($sa)->get(route('sa.customers.show', $customer))
             ->assertOk()->assertSee('Citra Customer')->assertSee('Beat Deluxe')->assertSee('Riwayat Servis');
         $this->assertDatabaseHas('vehicles', ['id' => $vehicle->id, 'model' => 'Beat Deluxe', 'last_odometer' => 950]);
     }
@@ -102,14 +102,12 @@ class ServiceAdviserWorkflowTest extends TestCase
         $budiOrder = $this->order($customer, $vehicle, $budi, 'WO-BUDI-0001');
         $agusOrder = $this->order($customer, $vehicle, $agus, 'WO-AGUS-0001');
 
-        $this->withSession(['demo_user_id' => $budi->id])->get(route('teknisi.index'))
+        $this->actingAs($budi)->get(route('teknisi.index'))
             ->assertOk()->assertSee('WO-BUDI-0001')->assertDontSee('WO-AGUS-0001');
-        $this->withSession(['demo_user_id' => $agus->id])->get(route('teknisi.index'))
+        $this->actingAs($agus)->get(route('teknisi.index'))
             ->assertOk()->assertSee('WO-AGUS-0001')->assertDontSee('WO-BUDI-0001');
-        $this->withSession(['demo_user_id' => $agus->id])->get(route('teknisi.inspect', $budiOrder))->assertForbidden();
-        $this->withSession(['demo_user_id' => $budi->id])->get(route('sa.customers.index'))->assertRedirectToRoute('dashboard');
-        $this->post(route('demo.switch'), ['role' => 'teknisi', 'technician' => 'Agus Pratama'])
-            ->assertSessionHas('demo_user_id', $agus->id);
+        $this->actingAs($agus)->get(route('teknisi.inspect', $budiOrder))->assertForbidden();
+        $this->actingAs($budi)->get(route('sa.customers.index'))->assertForbidden();
     }
 
     public function test_cashier_lists_invoices_and_records_method_details_after_payment(): void
@@ -117,15 +115,15 @@ class ServiceAdviserWorkflowTest extends TestCase
         $sa = $this->user('Rina', 'sa');
         $invoice = $this->invoice();
 
-        $this->withSession(['demo_user_id' => $sa->id])->get(route('sa.payments.index'))
+        $this->actingAs($sa)->get(route('sa.payments.index'))
             ->assertOk()->assertSee($invoice->invoice_number)->assertSee('QRIS')->assertSee('Uang kembalian')->assertSee('Transfer Bank');
 
-        $this->withSession(['demo_user_id' => $sa->id])->post(route('sa.payments.pay', $invoice), [
+        $this->actingAs($sa)->post(route('sa.payments.pay', $invoice), [
             'payment_method' => 'cash', 'cash_received' => 1000,
         ])->assertSessionHasErrors('cash_received');
         $this->assertDatabaseHas('invoices', ['id' => $invoice->id, 'payment_status' => 'unpaid']);
 
-        $this->withSession(['demo_user_id' => $sa->id])->post(route('sa.payments.pay', $invoice), [
+        $this->actingAs($sa)->post(route('sa.payments.pay', $invoice), [
             'payment_method' => 'transfer',
             'bank_account' => 'BCA · 1234567890 a.n. Bengkel Jomoto',
             'payment_reference' => 'TRX-001',
@@ -146,7 +144,7 @@ class ServiceAdviserWorkflowTest extends TestCase
         $sa = $this->user('Rina', 'sa');
         $invoice = $this->invoice();
 
-        $this->withSession(['demo_user_id' => $sa->id])->post(route('sa.payments.pay', $invoice), [
+        $this->actingAs($sa)->post(route('sa.payments.pay', $invoice), [
             'payment_method' => $method,
             ...$paymentData,
         ])->assertRedirect();

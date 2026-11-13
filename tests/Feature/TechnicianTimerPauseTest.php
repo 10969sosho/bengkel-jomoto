@@ -17,18 +17,18 @@ class TechnicianTimerPauseTest extends TestCase
         $sa = $this->user('Rina Wulandari', 'sa');
         $order = $this->order($technician);
 
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->actingAs($technician)
             ->post(route('teknisi.timer', $order), ['action' => 'start'])
             ->assertRedirect();
         $this->assertDatabaseHas('service_orders', ['id' => $order->id, 'status' => 'working']);
 
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->actingAs($technician)
             ->post(route('teknisi.timer', $order), ['action' => 'pause'])
             ->assertSessionHasErrors('pause_reason');
         $this->assertNull($order->workLogs()->first()->stopped_at, 'Timer tetap berjalan saat alasan jeda kosong.');
 
         $reason = 'Sparepart tidak tersedia sehingga perlu dilakukan pembelian terlebih dahulu.';
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->actingAs($technician)
             ->post(route('teknisi.timer', $order), ['action' => 'pause', 'pause_reason' => $reason])
             ->assertSessionHas('success');
 
@@ -37,13 +37,13 @@ class TechnicianTimerPauseTest extends TestCase
         $this->assertSame($reason, $log->pause_reason);
         $this->assertDatabaseHas('service_orders', ['id' => $order->id, 'status' => 'working']);
 
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->actingAs($technician)
             ->get(route('teknisi.index'))
             ->assertOk()
             ->assertSee('Riwayat Jeda Timer')
             ->assertSee($reason);
 
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->get(route('sa.show', $order))
             ->assertOk()
             ->assertSee('Riwayat Waktu Pengerjaan')
@@ -55,22 +55,22 @@ class TechnicianTimerPauseTest extends TestCase
         $technician = $this->user('Agus Pratama', 'teknisi');
         $order = $this->order($technician);
 
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->actingAs($technician)
             ->post(route('teknisi.timer', $order), [
                 'action' => 'pause',
                 'pause_reason' => 'Menunggu konfirmasi dari konsumen.',
             ])
             ->assertSessionHas('error', 'Timer sedang tidak berjalan, tidak ada yang bisa dijeda.');
 
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->actingAs($technician)
             ->post(route('teknisi.timer', $order), ['action' => 'start'])
             ->assertSessionHas('success', 'Timer pengerjaan dimulai.');
 
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->actingAs($technician)
             ->post(route('teknisi.timer', $order), ['action' => 'pause', 'pause_reason' => 'Menunggu konfirmasi dari konsumen.'])
             ->assertSessionHas('success', 'Timer dijeda. Alasan jeda dicatat dalam riwayat pengerjaan.');
 
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->actingAs($technician)
             ->post(route('teknisi.timer', $order), ['action' => 'start'])
             ->assertSessionHas('success', 'Timer dilanjutkan kembali.');
 
@@ -96,10 +96,16 @@ class TechnicianTimerPauseTest extends TestCase
             'fuel_type' => 'gasoline', 'last_odometer' => 1000,
         ]);
 
-        return ServiceOrder::create([
+        $order = ServiceOrder::create([
             'wo_number' => 'WO-2611-0011', 'customer_id' => $customer->id, 'vehicle_id' => $vehicle->id,
             'technician_id' => $technician->id, 'customer_complaint' => 'Rem depan bunyi',
             'service_type' => 'regular', 'location_type' => 'onsite', 'status' => 'approved',
         ]);
+        $order->inspection()->create([
+            'technician_id' => $technician->id,
+            'checklist' => [['key' => 'pengereman', 'label' => 'Sistem Pengereman', 'status' => 'g']],
+        ]);
+
+        return $order;
     }
 }

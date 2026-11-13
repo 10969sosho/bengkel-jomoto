@@ -177,8 +177,8 @@
         <div class="text-center">
             <div class="text-xs font-bold uppercase tracking-wide text-slate-400">Hormat kami,</div>
             <div class="mt-10 inline-block border-t border-slate-400 pt-1 font-semibold text-slate-700">
-                {{ $order->sa?->name ?? 'Service Adviser' }}
-                <div class="text-xs font-normal text-slate-400">Service Adviser · Jomoto Center</div>
+                {{ $order->sa?->name ?? 'Sales Adviser' }}
+                <div class="text-xs font-normal text-slate-400">Sales Adviser · Jomoto Center</div>
             </div>
         </div>
     </div>

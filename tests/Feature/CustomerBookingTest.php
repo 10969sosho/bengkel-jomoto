@@ -20,7 +20,7 @@ class CustomerBookingTest extends TestCase
         $customer = $this->user('Hendra Wijaya', 'customer');
         $vehicle = $this->vehicle($customer);
 
-        $this->withSession(['demo_user_id' => $customer->id])->post(route('customer.orders.store'), [
+        $this->actingAs($customer)->post(route('customer.orders.store'), [
             'vehicle_id' => $vehicle->id,
             'customer_complaint' => 'Motor sering mati mendadak',
             'odometer' => 1500,
@@ -37,7 +37,7 @@ class CustomerBookingTest extends TestCase
         $vehicle = $this->vehicle($customer);
         $pricelist = $this->pricelist('Servis Berkala Ringan', 85000);
 
-        $this->withSession(['demo_user_id' => $customer->id])->post(route('customer.orders.store'), [
+        $this->actingAs($customer)->post(route('customer.orders.store'), [
             'vehicle_id' => $vehicle->id,
             'customer_complaint' => 'Ganti oli',
             'odometer' => 1600,
@@ -58,7 +58,7 @@ class CustomerBookingTest extends TestCase
         $reguler = $this->pricelist('Servis Berkala Ringan', 85000);
         $cvt = $this->pricelist('Servis CVT / Roller', 120000);
 
-        $this->withSession(['demo_user_id' => $customer->id])->post(route('customer.orders.store'), [
+        $this->actingAs($customer)->post(route('customer.orders.store'), [
             'vehicle_id' => $vehicle->id,
             'customer_complaint' => 'CVT bunyi & ganti oli',
             'odometer' => 4100,
@@ -72,20 +72,20 @@ class CustomerBookingTest extends TestCase
         $this->assertSame(['Servis Berkala Ringan', 'Servis CVT / Roller'], $order->requestedServiceLabels());
         Storage::disk('public')->assertExists($order->stnk_photo);
 
-        $this->withSession(['demo_user_id' => $customer->id])
+        $this->actingAs($customer)
             ->get(route('customer.index'))
             ->assertOk()
             ->assertSee('Servis Berkala Ringan')
             ->assertSee('Lihat Foto STNK');
 
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->get(route('sa.index'))
             ->assertOk()
             ->assertSee('Booking Service Masuk')
             ->assertSee('Servis CVT / Roller')
             ->assertSee('Foto STNK');
 
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->get(route('sa.show', $order))
             ->assertOk()
             ->assertSee('Layanan Diminta Customer')

@@ -12,30 +12,14 @@ use Illuminate\View\View;
 
 class TeknisiController extends Controller
 {
-    public const CHECKLIST_ITEMS = [
-        'rem_depan' => 'Rem Depan',
-        'rem_belakang' => 'Rem Belakang',
-        'ban_depan' => 'Ban Depan',
-        'ban_belakang' => 'Ban Belakang',
-        'lampu_depan' => 'Lampu Depan',
-        'lampu_belakang' => 'Lampu Belakang & Sein',
-        'klakson' => 'Klakson',
-        'aki' => 'Aki / Baterai',
-        'oli' => 'Oli Mesin',
-        'rantai_belt' => 'Rantai / Belt CVT',
-        'suspensi' => 'Suspensi Depan & Belakang',
-        'body_cat' => 'Body & Cat',
-        'kelengkapan' => 'STNK & Kelengkapan',
-    ];
-
     public function index(): View
     {
         $orders = ServiceOrder::with(['customer', 'vehicle', 'items', 'workLogs', 'inspection'])
             ->where('technician_id', auth()->id())
-            ->whereIn('status', ['draft', 'waiting_approval', 'approved', 'working', 'completed'])
+            ->whereIn('status', ['draft', 'inspected', 'waiting_approval', 'approved', 'working', 'completed'])
             ->orderByDesc('id')
             ->get()
-            ->sortBy(fn (ServiceOrder $order) => array_search($order->status, ['working', 'approved', 'waiting_approval', 'draft', 'completed']))
+            ->sortBy(fn (ServiceOrder $order) => array_search($order->status, ['working', 'approved', 'inspected', 'waiting_approval', 'draft', 'completed']))
             ->values();
 
         return view('teknisi.dashboard', compact('orders'));
@@ -49,7 +33,7 @@ class TeknisiController extends Controller
 
         return view('teknisi.inspect', [
             'order' => $serviceOrder,
-            'checklistItems' => self::CHECKLIST_ITEMS,
+            'checklistItems' => $serviceOrder->inspectionChecklist(),
         ]);
     }
 
@@ -59,7 +43,7 @@ class TeknisiController extends Controller
 
         $data = $request->validate([
             'status' => ['nullable', 'array'],
-            'status.*' => ['nullable', 'in:ok,attention,broken'],
+            'status.*' => ['nullable', 'in:ok,p,s,g'],
             'findings' => ['nullable', 'string', 'max:3000'],
             'recommendations' => ['nullable', 'string', 'max:3000'],
             'before_photos' => ['nullable', 'array', 'max:5'],
@@ -69,10 +53,10 @@ class TeknisiController extends Controller
         ]);
 
         $checklist = [];
-        foreach (array_keys(self::CHECKLIST_ITEMS) as $key) {
+        foreach ($serviceOrder->inspectionChecklist() as $key => $label) {
             $checklist[] = [
                 'key' => $key,
-                'label' => self::CHECKLIST_ITEMS[$key],
+                'label' => $label,
                 'status' => $data['status'][$key] ?? 'ok',
             ];
         }
@@ -100,8 +84,12 @@ class TeknisiController extends Controller
             ],
         );
 
+        if ($serviceOrder->status === 'draft') {
+            $serviceOrder->update(['status' => 'inspected']);
+        }
+
         return redirect()->route('teknisi.index')
-            ->with('success', "Lembar pemeriksaan {$serviceOrder->wo_number} tersimpan.");
+            ->with('success', "Lembar pemeriksaan {$serviceOrder->wo_number} tersimpan. Diteruskan ke Sales Adviser untuk estimasi.");
     }
 
     public function timer(Request $request, ServiceOrder $serviceOrder): RedirectResponse
@@ -112,23 +100,27 @@ class TeknisiController extends Controller
         $openLog = $serviceOrder->workLogs()->whereNull('stopped_at')->latest('id')->first();
 
         if ($action === 'start') {
-            $resuming = $openLog === null && $serviceOrder->status === 'working';
+            if ($openLog === null) {
+                $resuming = $serviceOrder->status === 'working';
 
-            if (! $openLog) {
+                if (! $resuming && ($serviceOrder->status !== 'approved' || ! $serviceOrder->inspection()->exists())) {
+                    return back()->with('error', 'Timer hanya bisa dimulai setelah estimasi di-ACC customer dan pemeriksaan selesai.');
+                }
+
                 WorkLog::create([
                     'service_order_id' => $serviceOrder->id,
                     'technician_id' => auth()->id(),
                     'started_at' => now(),
                 ]);
+
+                if (! $resuming) {
+                    $serviceOrder->update(['status' => 'working']);
+                }
+
+                return back()->with('success', $resuming ? 'Timer dilanjutkan kembali.' : 'Timer pengerjaan dimulai.');
             }
 
-            if (in_array($serviceOrder->status, ['approved', 'waiting_approval', 'draft'], true)) {
-                $serviceOrder->update(['status' => 'working']);
-            }
-
-            return back()->with('success', $resuming
-                ? 'Timer dilanjutkan kembali.'
-                : 'Timer pengerjaan dimulai.');
+            return back()->with('success', 'Timer dilanjutkan kembali.');
         }
 
         if ($action === 'pause') {

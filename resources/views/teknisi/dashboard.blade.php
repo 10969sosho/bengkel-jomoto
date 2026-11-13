@@ -99,7 +99,7 @@
                     {{ $order->inspection ? 'Lihat / Ubah Pemeriksaan' : 'Isi Lembar Pemeriksaan' }}
                 </a>
 
-                @if($order->status === 'approved' || $order->status === 'waiting_approval' || $order->status === 'draft')
+                @if($order->status === 'approved' && $order->inspection)
                     <form method="POST" action="{{ route('teknisi.timer', $order) }}">
                         @csrf
                         <input type="hidden" name="action" value="start">
@@ -124,7 +124,13 @@
                     @endif
                 @else
                     <div class="grid place-items-center rounded-xl bg-slate-100 px-4 py-2.5 text-center text-xs font-bold uppercase tracking-wide text-slate-400">
-                        Pengerjaan selesai
+                        @if(in_array($order->status, ['completed', 'waiting_confirmation', 'confirmed', 'invoiced']))
+                            Pengerjaan selesai
+                        @elseif($order->status === 'approved' && ! $order->inspection)
+                            Menunggu pemeriksaan
+                        @else
+                            Menunggu ACC estimasi
+                        @endif
                     </div>
                 @endif
 

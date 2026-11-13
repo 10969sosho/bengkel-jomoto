@@ -8,7 +8,11 @@ class DashboardController extends Controller
 {
     public function __invoke(): RedirectResponse
     {
-        $role = auth()->user()?->role ?? 'admin';
+        $role = auth()->user()?->role;
+
+        if (! $role) {
+            return redirect()->route('login');
+        }
 
         return redirect()->route(match ($role) {
             'sa' => 'sa.index',

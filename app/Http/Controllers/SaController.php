@@ -71,6 +71,8 @@ class SaController extends Controller
             'odometer' => ['required', 'integer', 'min:0'],
             'customer_complaint' => ['required', 'string', 'max:2000'],
             'estimated_completion' => ['nullable', 'date'],
+            'inspection_checklist' => ['nullable', 'array'],
+            'inspection_checklist.*' => ['string', Rule::in(array_keys(ServiceOrder::INSPECTION_CHECKLIST))],
         ]);
 
         $booking = isset($data['booking_id'])
@@ -98,6 +100,7 @@ class SaController extends Controller
             'coupon_milestone' => $coupon['milestone'] ?? null,
             'customer_complaint' => $data['customer_complaint'],
             'estimated_completion' => $data['estimated_completion'] ?? null,
+            'inspection_checklist' => array_values($data['inspection_checklist'] ?? array_keys(ServiceOrder::INSPECTION_CHECKLIST)),
             'sa_id' => auth()->id(),
             'status' => 'draft',
         ];
@@ -295,6 +298,10 @@ class SaController extends Controller
 
     public function estimate(Request $request, ServiceOrder $serviceOrder): RedirectResponse
     {
+        if (! $serviceOrder->inspection()->exists()) {
+            return back()->with('error', 'Estimasi baru bisa dibuat setelah teknisi mengisi lembar pemeriksaan.');
+        }
+
         $data = $request->validate([
             'sa_diagnosis' => ['nullable', 'string', 'max:2000'],
             'items' => ['array', 'min:1'],
@@ -327,7 +334,7 @@ class SaController extends Controller
             ]);
         }
 
-        if (in_array($serviceOrder->status, ['draft', 'waiting_approval'], true)) {
+        if (in_array($serviceOrder->status, ['draft', 'inspected', 'waiting_approval'], true)) {
             $serviceOrder->update(['status' => 'waiting_approval']);
         }
 

@@ -1,17 +1,22 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\DemoController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\SaController;
 use App\Http\Controllers\TeknisiController;
 use Illuminate\Support\Facades\Route;
 
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'create'])->name('login');
+    Route::post('/login', [AuthController::class, 'store']);
+});
+Route::post('/logout', [AuthController::class, 'destroy'])->middleware('auth')->name('logout');
+
 Route::get('/', fn () => redirect()->route('dashboard'));
 Route::get('/dashboard', DashboardController::class)->name('dashboard');
-Route::post('/demo/switch', [DemoController::class, 'switch'])->name('demo.switch');
 
 Route::middleware('role:sa')->prefix('sa')->name('sa.')->group(function () {
     Route::get('/', [SaController::class, 'index'])->name('index');
@@ -45,6 +50,8 @@ Route::middleware('role:teknisi')->prefix('teknisi')->name('teknisi.')->group(fu
 
 Route::middleware('role:customer')->prefix('customer')->name('customer.')->group(function () {
     Route::get('/', [CustomerController::class, 'index'])->name('index');
+    Route::get('/vehicles', [CustomerController::class, 'vehicles'])->name('vehicles');
+    Route::get('/booking/create', [CustomerController::class, 'createBooking'])->name('booking.create');
     Route::post('/vehicles', [CustomerController::class, 'storeVehicle'])->name('vehicles.store');
     Route::post('/service-orders', [CustomerController::class, 'storeOrder'])->name('orders.store');
     Route::post('/service-orders/{serviceOrder}/approve', [CustomerController::class, 'approveEstimate'])->name('orders.approve');
@@ -59,4 +66,5 @@ Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function
 Route::get('/api-docs', fn () => view('api-docs'))
     ->middleware('role:admin,sa')->name('api-docs');
 
-Route::get('/invoices/{invoice}/print', [InvoiceController::class, 'print'])->name('invoices.print');
+Route::get('/invoices/{invoice}/print', [InvoiceController::class, 'print'])
+    ->middleware('role:admin,sa,customer')->name('invoices.print');

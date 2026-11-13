@@ -18,6 +18,7 @@ class ServiceOrder extends Model
         'technician_id',
         'customer_complaint',
         'requested_services',
+        'inspection_checklist',
         'stnk_photo',
         'sa_diagnosis',
         'service_type',
@@ -46,6 +47,7 @@ class ServiceOrder extends Model
             'final_check_at' => 'datetime',
             'result_confirmed_at' => 'datetime',
             'requested_services' => 'array',
+            'inspection_checklist' => 'array',
             'visit_fee' => 'integer',
             'odometer' => 'integer',
             'coupon_milestone' => 'integer',
@@ -108,10 +110,39 @@ class ServiceOrder extends Model
         'Kwitansi',
     ];
 
+    /** Checklist pemeriksaan awal sepeda motor: 8 kategori yang ditugaskan SA ke teknisi. */
+    public const INSPECTION_CHECKLIST = [
+        'mesin' => 'Mesin',
+        'kelistrikan' => 'Kelistrikan',
+        'pengereman' => 'Sistem Pengereman',
+        'roda' => 'Roda',
+        'suspensi' => 'Suspensi',
+        'pendingin' => 'Sistem Pendingin',
+        'kemudi' => 'Sistem Kemudi',
+        'sprocket' => 'Sprocket & Rantai',
+    ];
+
+    /**
+     * Checklist pemeriksaan untuk WO ini (key => label), default 8 kategori.
+     *
+     * @return array<string, string>
+     */
+    public function inspectionChecklist(): array
+    {
+        $keys = array_values(array_filter($this->inspection_checklist ?? [], fn ($key): bool => isset(self::INSPECTION_CHECKLIST[$key])));
+
+        if ($keys === []) {
+            return self::INSPECTION_CHECKLIST;
+        }
+
+        return array_map(fn (string $key): string => self::INSPECTION_CHECKLIST[$key], $keys);
+    }
+
     public function statusLabel(): string
     {
         return match ($this->status) {
             'draft' => 'Antrian Baru',
+            'inspected' => 'Laporan Pemeriksaan Masuk',
             'waiting_approval' => 'Menunggu Persetujuan Estimasi',
             'approved' => 'Estimasi Disetujui',
             'working' => 'Sedang Dikerjakan',
@@ -128,6 +159,7 @@ class ServiceOrder extends Model
     {
         return match ($this->status) {
             'draft' => 'bg-slate-100 text-slate-700',
+            'inspected' => 'bg-teal-100 text-teal-700',
             'waiting_approval' => 'bg-amber-100 text-amber-700',
             'approved' => 'bg-sky-100 text-sky-700',
             'working' => 'bg-indigo-100 text-indigo-700',
@@ -144,6 +176,7 @@ class ServiceOrder extends Model
     {
         return match ($this->status) {
             'draft' => 10,
+            'inspected' => 30,
             'waiting_approval' => 35,
             'approved' => 50,
             'working' => 70,

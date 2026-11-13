@@ -92,7 +92,7 @@
                     </div>
                     <div class="max-w-xs">
                         <label class="mb-1 block text-sm font-semibold text-lime-900">Biaya Kunjungan (Rp)</label>
-                        <input type="number" min="0" name="visit_fee" value="{{ old('visit_fee', $selectedBooking?->visit_fee ?? 50000) }}" class="w-full rounded-xl border-lime-200 bg-white px-3 py-2.5 text-sm">
+                        <input type="number" min="0" name="visit_fee" value="{{ old('visit_fee', $selectedBooking?->visit_fee ?: 50000) }}" class="w-full rounded-xl border-lime-200 bg-white px-3 py-2.5 text-sm">
                     </div>
                 </div>
 
@@ -106,6 +106,25 @@
                     <label class="mb-1.5 block text-sm font-semibold text-slate-700">Keluhan Customer <span class="text-red-500">*</span></label>
                     <textarea name="customer_complaint" rows="4" required placeholder="Contoh: motor sering mati mendadak saat perjalanan jauh, rem depan bunyi..."
                               class="w-full rounded-2xl border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none transition focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">{{ old('customer_complaint', $selectedBooking?->customer_complaint) }}</textarea>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="mb-1.5 block text-sm font-semibold text-slate-700">
+                        Checklist Pemeriksaan Awal <span class="text-red-500">*</span>
+                    </label>
+                    <p class="mb-2 text-xs text-slate-400">Kategori yang ditugaskan ke teknisi untuk diisi di lembar pemeriksaan. Semua kategori terpilih secara default.</p>
+                    @php($checkedChecklist = old('inspection_checklist', array_keys(\App\Models\ServiceOrder::INSPECTION_CHECKLIST)))
+                    <div class="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+                        @foreach(\App\Models\ServiceOrder::INSPECTION_CHECKLIST as $key => $label)
+                            <label class="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-700 transition hover:border-lime-300 hover:bg-white">
+                                <input type="checkbox" name="inspection_checklist[]" value="{{ $key }}"
+                                       @checked(in_array($key, $checkedChecklist))
+                                       class="h-4 w-4 rounded border-slate-300 text-lime-500 focus:ring-lime-400">
+                                {{ $label }}
+                            </label>
+                        @endforeach
+                    </div>
+                    @error('inspection_checklist')<p class="mt-1.5 text-xs font-semibold text-red-500">{{ $message }}</p>@enderror
                 </div>
             </div>
 

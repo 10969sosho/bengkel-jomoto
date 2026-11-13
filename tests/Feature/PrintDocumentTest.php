@@ -16,8 +16,10 @@ class PrintDocumentTest extends TestCase
     public function test_invoice_print_page_provides_custom_paper_size_controls(): void
     {
         $invoice = $this->invoice();
+        $viewer = $this->user('Print Viewer', 'customer');
 
-        $this->get(route('invoices.print', $invoice))
+        $this->actingAs($viewer)
+            ->get(route('invoices.print', $invoice))
             ->assertOk()
             ->assertSee('Ukuran Kertas')
             ->assertSee('Custom (tentukan sendiri)')
@@ -37,7 +39,7 @@ class PrintDocumentTest extends TestCase
             'unit_price' => 85000, 'subtotal' => 85000, 'is_free' => false,
         ]);
 
-        $this->withSession(['demo_user_id' => $sa->id])
+        $this->actingAs($sa)
             ->get(route('sa.print.estimate', $order))
             ->assertOk()
             ->assertSee('Lembar Estimasi Servis')
@@ -47,9 +49,9 @@ class PrintDocumentTest extends TestCase
             ->assertSee('Rp 94,350')
             ->assertSee('@page', false);
 
-        $this->withSession(['demo_user_id' => $technician->id])
+        $this->actingAs($technician)
             ->get(route('sa.print.estimate', $order))
-            ->assertRedirectToRoute('dashboard');
+            ->assertForbidden();
     }
 
     private function user(string $name, string $role): User

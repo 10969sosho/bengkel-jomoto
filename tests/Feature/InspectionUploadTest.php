@@ -33,7 +33,7 @@ class InspectionUploadTest extends TestCase
             'location_type' => 'onsite', 'status' => 'working',
         ]);
 
-        $response = $this->withSession(['demo_user_id' => $technician->id])->post(route('teknisi.inspect.save', $order), [
+        $response = $this->actingAs($technician)->post(route('teknisi.inspect.save', $order), [
             'before_photos' => [UploadedFile::fake()->image('before.jpg')],
             'after_photos' => [UploadedFile::fake()->image('after.jpg')],
         ]);

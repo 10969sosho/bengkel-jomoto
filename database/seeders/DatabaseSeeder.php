@@ -119,6 +119,19 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
+        // ── Master: 68 Item Pricelist Layanan (8 kategori, harga per aksi P/S/G, '-' = 0) ──
+        foreach ($this->serviceCatalog() as [$category, $name, $priceP, $priceS, $priceG]) {
+            ServicePricelist::create([
+                'service_name' => $name,
+                'category' => $category,
+                'price' => $priceP ?: ($priceS ?: $priceG),
+                'price_p' => $priceP,
+                'price_s' => $priceS,
+                'price_g' => $priceG,
+                'is_active' => true,
+            ]);
+        }
+
         // ── Master: Katalog Sub-Material ──
         $subMaterials = [
             ['Gemuk / Pelumasan Khusus', 'Penggantian gemuk CVT, rantai, atau komponen lain', 25000],
@@ -252,12 +265,13 @@ class DatabaseSeeder extends Seeder
             'service_order_id' => $wo2->id,
             'technician_id' => $budi->id,
             'checklist' => $this->checklist([
-                'rem_depan' => 'attention', 'ban_depan' => 'ok', 'oli' => 'ok',
-                'body_cat' => 'ok', 'kelengkapan' => 'ok',
+                'pengereman' => 'p', 'roda' => 'ok', 'mesin' => 'ok',
             ]),
             'findings' => 'Kampas rem depan tersisa ±2 mm, piringan rem bergelombang. Sisanya dalam kondisi baik.',
             'recommendations' => 'Ganti kampas rem depan + service piringan. Estimasi menyusul dari SA.',
         ]);
+
+        $wo2->update(['status' => 'inspected']);
 
         // ── Service Order 3: Estimasi menunggu persetujuan ──
         $wo3 = ServiceOrder::create([
@@ -280,7 +294,7 @@ class DatabaseSeeder extends Seeder
             'service_order_id' => $wo3->id,
             'technician_id' => $agus->id,
             'checklist' => $this->checklist([
-                'rantai_belt' => 'attention', 'oli' => 'attention',
+                'sprocket' => 'p', 'mesin' => 'p',
             ]),
             'findings' => 'Belt CVT retak halus, roller sudah pipih di sisi luar. Oli mesin mulai kental.',
             'recommendations' => 'Ganti belt & roller set, ganti oli mesin. Service berkala 10.000 KM (jaminan jasa gratis Jomoto).',
@@ -315,7 +329,7 @@ class DatabaseSeeder extends Seeder
             'service_order_id' => $wo4->id,
             'technician_id' => $budi->id,
             'checklist' => $this->checklist([
-                'rantai_belt' => 'broken', 'suspensi' => 'attention',
+                'sprocket' => 'g', 'suspensi' => 'p',
             ]),
             'findings' => 'Roller CVT aus tidak simetris, belt sudah tipis. Suspensi belakang mulai lemah.',
             'recommendations' => 'Ganti roller set & belt CVT, lakukan servis CVT lengkap.',
@@ -368,7 +382,7 @@ class DatabaseSeeder extends Seeder
             'service_order_id' => $wo5->id,
             'technician_id' => $agus->id,
             'checklist' => $this->checklist([
-                'oli' => 'attention', 'ban_belakang' => 'attention',
+                'mesin' => 'p', 'roda' => 'p',
             ]),
             'findings' => 'Oli mesin sudah hitam kental, ban belakang sisa tapak 60%.',
             'recommendations' => 'Ganti oli mesin + pelumasan CVT. Ban masih layak pakai sampai 15.000 KM.',
@@ -425,7 +439,7 @@ class DatabaseSeeder extends Seeder
         Inspection::create([
             'service_order_id' => $homeOrder->id,
             'technician_id' => $budi->id,
-            'checklist' => $this->checklist(['rem_depan' => 'attention', 'oli' => 'attention']),
+            'checklist' => $this->checklist(['pengereman' => 'p', 'mesin' => 'p']),
             'findings' => 'Oli mencapai jadwal penggantian, kampas rem depan mulai menipis.',
             'recommendations' => 'Penggantian oli ditanggung kupon ATPM; kampas rem disetujui customer.',
             'before_photos' => ['inspections/demo-before.svg'],
@@ -480,23 +494,103 @@ class DatabaseSeeder extends Seeder
         unset($admin);
     }
 
+    /**
+     * 68 item pekerjaan layanan: [kategori, nama, harga P, harga S, harga G]. Harga 0 = '-'.
+     *
+     * @return array<int, array{0: string, 1: string, 2: int, 3: int, 4: int}>
+     */
+    private function serviceCatalog(): array
+    {
+        return [
+            // ── Mesin (12) ──
+            ['mesin', 'Tune Up Mesin', 0, 175000, 0],
+            ['mesin', 'Bongkar Pasang Blok Silinder', 250000, 0, 0],
+            ['mesin', 'Perbaikan Piston & Seher', 175000, 0, 0],
+            ['mesin', 'Ganti Piston Ring', 0, 0, 300000],
+            ['mesin', 'Perapian / Ganti Klep', 85000, 65000, 150000],
+            ['mesin', 'Servis Karburator / Throttle Body', 95000, 75000, 0],
+            ['mesin', 'Ganti Oli Mesin + Filter', 0, 65000, 0],
+            ['mesin', 'Ganti Busi', 0, 25000, 30000],
+            ['mesin', 'Perbaikan Dinamo Starter', 150000, 0, 0],
+            ['mesin', 'Ganti Gasket / Packing Mesin', 0, 0, 125000],
+            ['mesin', 'Perbaikan Engine Mounting', 65000, 30000, 150000],
+            ['mesin', 'Perbaikan Cam Chain / Tensioner', 75000, 50000, 120000],
+
+            // ── Kelistrikan (10) ──
+            ['kelistrikan', 'Servis Kelistrikan Umum', 0, 100000, 0],
+            ['kelistrikan', 'Perbaikan Alternator / Kapasitor', 135000, 0, 0],
+            ['kelistrikan', 'Ganti Alternator', 0, 0, 475000],
+            ['kelistrikan', 'Perbaikan Coil Pengapian', 95000, 0, 0],
+            ['kelistrikan', 'Ganti Coil', 0, 0, 250000],
+            ['kelistrikan', 'Perbaikan CDI / ECU', 150000, 0, 0],
+            ['kelistrikan', 'Perbaikan Kabel & Soket', 35000, 0, 0],
+            ['kelistrikan', 'Servis Aki / Baterai', 25000, 30000, 35000],
+            ['kelistrikan', 'Perbaikan Lampu & Sein', 45000, 25000, 75000],
+            ['kelistrikan', 'Perbaikan Saklar & Klakson', 40000, 25000, 85000],
+
+            // ── Sistem Pengereman (8) ──
+            ['pengereman', 'Servis Rem Depan', 50000, 45000, 0],
+            ['pengereman', 'Ganti Kampas Rem Depan', 0, 0, 65000],
+            ['pengereman', 'Servis Rem Belakang', 50000, 45000, 0],
+            ['pengereman', 'Ganti Kampas Rem Belakang', 0, 0, 65000],
+            ['pengereman', 'Perbaikan / Lolos Piringan Cakram', 75000, 40000, 175000],
+            ['pengereman', 'Perbaikan Kaliper & Piston Rem', 85000, 50000, 0],
+            ['pengereman', 'Ganti Minyak Rem & Bleeding', 0, 45000, 0],
+            ['pengereman', 'Perbaikan Selang & Master Rem', 65000, 0, 120000],
+
+            // ── Roda (8) ──
+            ['roda', 'Spooring / Setel Roda', 0, 50000, 0],
+            ['roda', 'Ganti Ban Depan', 0, 35000, 0],
+            ['roda', 'Ganti Ban Belakang', 0, 40000, 0],
+            ['roda', 'Perbaikan Ban Bocor (Tambal)', 25000, 0, 0],
+            ['roda', 'Perbaikan Velg (Press / Las)', 75000, 0, 350000],
+            ['roda', 'Ganti Tubeless Sealant', 0, 30000, 0],
+            ['roda', 'Perbaikan Bearing Roda', 55000, 0, 95000],
+            ['roda', 'Perbaikan / Ganti Tutup Pentil & Klep', 20000, 0, 45000],
+
+            // ── Suspensi (8) ──
+            ['suspensi', 'Servis Shock Depan', 65000, 55000, 0],
+            ['suspensi', 'Ganti Shockbreaker Depan', 0, 40000, 150000],
+            ['suspensi', 'Servis Shock Belakang', 65000, 55000, 0],
+            ['suspensi', 'Ganti Shockbreaker Belakang', 0, 40000, 175000],
+            ['suspensi', 'Perbaikan / Ganti Segitiga & Conset', 95000, 50000, 225000],
+            ['suspensi', 'Perbaikan / Ganti Tabung Shock', 125000, 0, 250000],
+            ['suspensi', 'Perbaikan / Ganti Karet Bushing', 45000, 0, 85000],
+            ['suspensi', 'Servis Link Stabilizer / Penyangga', 40000, 35000, 95000],
+
+            // ── Sistem Pendingin (7) ──
+            ['pendingin', 'Servis Radiator & Flushing', 65000, 75000, 0],
+            ['pendingin', 'Ganti Air Radiator', 0, 45000, 0],
+            ['pendingin', 'Perbaikan / Ganti Pompa Air', 95000, 0, 275000],
+            ['pendingin', 'Perbaikan Selang Radiator', 45000, 0, 95000],
+            ['pendingin', 'Ganti Thermostat', 0, 40000, 125000],
+            ['pendingin', 'Perbaikan / Ganti Kipas Radiator', 75000, 35000, 175000],
+            ['pendingin', 'Perbaikan Bocor Blok / Silinder Air', 175000, 0, 0],
+
+            // ── Sistem Kemudi (6) ──
+            ['kemudi', 'Servis Setang & Steering Head', 55000, 45000, 0],
+            ['kemudi', 'Perbaikan / Ganti Karet Grip', 0, 25000, 45000],
+            ['kemudi', 'Perbaikan / Ganti Kabel Kopling Setang', 45000, 35000, 85000],
+            ['kemudi', 'Perbaikan / Ganti Tuas Rem & Kopling', 50000, 30000, 95000],
+            ['kemudi', 'Perbaikan / Ganti Spion', 35000, 0, 75000],
+            ['kemudi', 'Perbaikan / Ganti Batang Setang (Stang)', 75000, 0, 175000],
+
+            // ── Sprocket & Rantai (9) ──
+            ['sprocket', 'Servis & Pelumasan Rantai', 0, 35000, 0],
+            ['sprocket', 'Ganti Rantai Sprocket Set', 0, 65000, 0],
+            ['sprocket', 'Perbaikan / Ganti Gear Sprocket Belakang', 55000, 40000, 85000],
+            ['sprocket', 'Perbaikan / Ganti Gear Sprocket Depan', 55000, 40000, 85000],
+            ['sprocket', 'Perbaikan / Ganti Tensioner Rantai', 45000, 0, 95000],
+            ['sprocket', 'Perbaikan / Ganti Roller CVT', 65000, 50000, 0],
+            ['sprocket', 'Ganti Belt CVT / V-Belt', 0, 55000, 0],
+            ['sprocket', 'Servis / Bongkar Housing CVT', 95000, 75000, 0],
+            ['sprocket', 'Perbaikan / Ganti Slider & Guide Rantai', 45000, 30000, 85000],
+        ];
+    }
+
     private function checklist(array $overrides = []): array
     {
-        $labels = [
-            'rem_depan' => 'Rem Depan',
-            'rem_belakang' => 'Rem Belakang',
-            'ban_depan' => 'Ban Depan',
-            'ban_belakang' => 'Ban Belakang',
-            'lampu_depan' => 'Lampu Depan',
-            'lampu_belakang' => 'Lampu Belakang & Sein',
-            'klakson' => 'Klakson',
-            'aki' => 'Aki / Baterai',
-            'oli' => 'Oli Mesin',
-            'rantai_belt' => 'Rantai / Belt CVT',
-            'suspensi' => 'Suspensi Depan & Belakang',
-            'body_cat' => 'Body & Cat',
-            'kelengkapan' => 'STNK & Kelengkapan',
-        ];
+        $labels = ServiceOrder::INSPECTION_CHECKLIST;
 
         return collect($labels)
             ->map(fn ($label, $key) => [

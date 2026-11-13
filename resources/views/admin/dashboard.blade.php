@@ -97,7 +97,19 @@
                                         {{ $p->service_name }}
                                         <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">{{ $p->categoryLabel() }}</span>
                                     </td>
-                                    <td class="px-4 py-2.5 text-right font-bold text-slate-700">Rp {{ number_format($p->price) }}</td>
+                                    <td class="px-4 py-2.5 text-right font-bold text-slate-700">
+                                        @php($actions = $p->actionPrices())
+                                        @if($actions !== [])
+                                            <span class="flex flex-wrap justify-end gap-1">
+                                                @foreach($actions as $action => $price)
+                                                    <span class="rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] font-black text-lime-300">{{ $action }}</span>
+                                                    <span class="mr-1 font-semibold text-slate-600">Rp {{ number_format($price) }}</span>
+                                                @endforeach
+                                            </span>
+                                        @else
+                                            Rp {{ number_format($p->price) }}
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

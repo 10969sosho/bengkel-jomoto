@@ -47,7 +47,7 @@ class ReportsDashboardTest extends TestCase
             'started_at' => now()->subHour(), 'stopped_at' => now(), 'duration_seconds' => 3600,
         ]);
 
-        $this->withSession(['demo_user_id' => $admin->id])->get('/admin/reports?period=today')
+        $this->actingAs($admin)->get('/admin/reports?period=today')
             ->assertOk()
             ->assertSee('Rp 444')
             ->assertSee('Jasa Servis')

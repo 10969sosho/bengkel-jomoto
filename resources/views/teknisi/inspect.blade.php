@@ -59,10 +59,11 @@
                         <span class="text-sm font-medium text-slate-700">{{ $label }}</span>
                         <select name="status[{{ $key }}]"
                                 class="cursor-pointer rounded-lg border-slate-200 px-2 py-1.5 text-xs font-bold outline-none transition focus:ring-2 focus:ring-lime-200
-                                {{ ($current ?? 'ok') === 'ok' ? 'bg-lime-50 text-lime-700' : (($current ?? 'ok') === 'attention' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700') }}">
+                                {{ ($current ?? 'ok') === 'ok' ? 'bg-lime-50 text-lime-700' : ((($current ?? 'ok') === 'p' || ($current ?? 'ok') === 's') ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700') }}">
                             <option value="ok" @selected(($current ?? 'ok') === 'ok')>OK</option>
-                            <option value="attention" @selected($current === 'attention')>Perlu Perhatian</option>
-                            <option value="broken" @selected($current === 'broken')>Rusak</option>
+                            <option value="p" @selected($current === 'p')>P · Perlu Perhatian</option>
+                            <option value="s" @selected($current === 's')>S · Perlu Servis</option>
+                            <option value="g" @selected($current === 'g')>G · Perlu Ganti</option>
                         </select>
                     </div>
                 @endforeach

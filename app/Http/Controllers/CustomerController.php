@@ -25,16 +25,37 @@ class CustomerController extends Controller
             ->get();
 
         $active = $orders->whereIn('status', [
-            'draft', 'waiting_approval', 'approved', 'working', 'completed', 'waiting_confirmation', 'confirmed',
+            'draft', 'inspected', 'waiting_approval', 'approved', 'working', 'completed', 'waiting_confirmation', 'confirmed',
         ]);
         $history = $orders->whereIn('status', ['invoiced', 'cancelled']);
 
-        $pricelists = ServicePricelist::orderBy('category')->orderBy('service_name')->get();
-        $pricelistNames = $pricelists->pluck('service_name', 'id')->all();
+        $pricelistNames = ServicePricelist::pluck('service_name', 'id')->all();
 
         return view('customer.dashboard', compact(
-            'user', 'vehicles', 'active', 'history', 'pricelists', 'pricelistNames',
+            'user', 'vehicles', 'active', 'history', 'pricelistNames',
         ));
+    }
+
+    /** Halaman mandiri: daftar kendaraan customer + form pendaftaran kendaraan baru. */
+    public function vehicles(): View
+    {
+        $vehicles = auth()->user()->vehicles()
+            ->with(['serviceOrders' => fn ($query) => $query->whereNotNull('coupon_milestone')->where('status', '!=', 'cancelled')])
+            ->orderBy('plate_number')->get();
+
+        return view('customer.vehicles', compact('vehicles'));
+    }
+
+    /** Halaman mandiri: booking servis baru oleh customer. */
+    public function createBooking(): View
+    {
+        $vehicles = auth()->user()->vehicles()
+            ->with(['serviceOrders' => fn ($query) => $query->whereNotNull('coupon_milestone')->where('status', '!=', 'cancelled')])
+            ->orderBy('plate_number')->get();
+
+        $pricelists = ServicePricelist::serviceCategories()->active()->orderBy('category')->orderBy('service_name')->get();
+
+        return view('customer.booking.create', compact('vehicles', 'pricelists'));
     }
 
     public function storeVehicle(Request $request): RedirectResponse
@@ -63,7 +84,6 @@ class CustomerController extends Controller
             'location_type' => ['required', 'in:onsite,offsite'],
             'offsite_address' => ['required_if:location_type,offsite', 'nullable', 'string', 'max:1000'],
             'location_notes' => ['nullable', 'string', 'max:255'],
-            'visit_fee' => ['nullable', 'integer', 'min:0'],
             'requested_services' => ['required', 'array', 'min:1'],
             'requested_services.*' => ['integer', 'distinct', Rule::exists('service_pricelists', 'id')->where('is_active', true)],
             'stnk_photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
@@ -87,11 +107,11 @@ class CustomerController extends Controller
             'location_type' => $data['location_type'],
             'offsite_address' => $offsite ? $data['offsite_address'] : null,
             'location_notes' => $offsite ? ($data['location_notes'] ?? null) : null,
-            'visit_fee' => $offsite ? ($data['visit_fee'] ?? 50_000) : 0,
+            'visit_fee' => 0,
             'status' => 'draft',
         ]);
 
-        return redirect()->route('customer.index')->with('success', "Booking {$order->wo_number} berhasil dikirim ke Service Adviser.");
+        return redirect()->route('customer.index')->with('success', "Booking {$order->wo_number} berhasil dikirim ke Sales Adviser.");
     }
 
     public function approveEstimate(Request $request, ServiceOrder $serviceOrder): RedirectResponse

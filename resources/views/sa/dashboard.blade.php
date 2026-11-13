@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
 @section('title', 'SA Dashboard')
-@section('page_title', 'Dashboard Service Adviser')
+@section('page_title', 'Dashboard Sales Adviser')
 @section('page_icon', 'clipboard-list')
 
 @section('content')
 <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
     <div>
-        <h1 class="text-xl font-bold text-slate-900">Dashboard Service Adviser</h1>
+        <h1 class="text-xl font-bold text-slate-900">Dashboard Sales Adviser</h1>
         <p class="text-sm text-slate-500">Kelola Work Order, assign teknisi, estimasi biaya, dan pembayaran.</p>
     </div>
     <a href="{{ route('sa.create') }}"
@@ -90,9 +90,52 @@
                             @endif
                         </td>
                         <td class="px-5 py-3.5 text-right">
-                            <a href="{{ route('sa.create', ['booking_id' => $booking->id]) }}" class="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-amber-600">
-                                Proses jadi WO <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
-                            </a>
+                            <div class="flex flex-wrap items-center justify-end gap-1.5">
+                                <button type="button" data-booking-detail="{{ $booking->id }}"
+                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50">
+                                    <i data-lucide="eye" class="h-3.5 w-3.5"></i> Detail Booking
+                                </button>
+                                <a href="{{ route('sa.create', ['booking_id' => $booking->id]) }}" class="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-amber-600">
+                                    Proses jadi WO <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr id="booking-detail-{{ $booking->id }}" class="hidden">
+                        <td colspan="6" class="bg-amber-50/50 px-5 py-4">
+                            <div class="grid gap-4 text-sm sm:grid-cols-3">
+                                <div>
+                                    <div class="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">Keluhan</div>
+                                    <p class="text-slate-700">{{ $booking->customer_complaint ?: '—' }}</p>
+                                </div>
+                                <div>
+                                    <div class="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">Kendaraan &amp; Kontak</div>
+                                    <div class="text-slate-700">
+                                        {{ $booking->vehicle?->fullName() }} · {{ $booking->vehicle?->plate_number }} · Tahun {{ $booking->vehicle?->year }}
+                                    </div>
+                                    <div class="mt-1 text-xs text-slate-500">
+                                        {{ $booking->customer?->name }} · {{ $booking->customer?->phone ?: 'tanpa no. HP' }}
+                                    </div>
+                                    @if($booking->vehicle?->last_odometer)
+                                        <div class="text-xs text-slate-400">Odo terakhir: {{ number_format($booking->vehicle->last_odometer) }} KM</div>
+                                    @endif
+                                </div>
+                                <div>
+                                    <div class="mb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400">Lokasi / Catatan</div>
+                                    @if($booking->location_type === 'offsite')
+                                        <div class="text-slate-700"><b>Home Service</b> — {{ $booking->offsite_address ?: 'alamat belum diisi' }}</div>
+                                        @if($booking->location_notes)<div class="mt-0.5 text-xs text-slate-500">Patokan: {{ $booking->location_notes }}</div>@endif
+                                    @else
+                                        <div class="text-slate-700">Service di Bengkel</div>
+                                    @endif
+                                    @if($booking->stnkUrl())
+                                        <a href="{{ $booking->stnkUrl() }}" target="_blank" rel="noopener"
+                                           class="mt-1.5 inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-bold text-slate-600">
+                                            <i data-lucide="image" class="h-3.5 w-3.5"></i> Lihat Foto STNK
+                                        </a>
+                                    @endif
+                                </div>
+                            </div>
                         </td>
                     </tr>
                 @empty
@@ -177,4 +220,12 @@
         </table>
     </div>
 </div>
+
+<script>
+    document.querySelectorAll('[data-booking-detail]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.getElementById('booking-detail-' + btn.dataset.bookingDetail)?.classList.toggle('hidden');
+        });
+    });
+</script>
 @endsection

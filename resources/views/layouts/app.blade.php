@@ -53,14 +53,7 @@
     $user = auth()->user();
     $role = $user?->role;
     $routeName = request()->route()?->getName() ?? '';
-    $roleLabels = ['sa' => 'Service Adviser', 'teknisi' => 'Teknisi', 'customer' => 'Customer', 'admin' => 'Admin'];
-    $demoRoles = [
-        ['role' => 'sa', 'label' => 'Service Adviser'],
-        ['role' => 'teknisi', 'technician' => 'Budi Santoso', 'label' => 'Teknisi (Budi)'],
-        ['role' => 'teknisi', 'technician' => 'Agus Pratama', 'label' => 'Teknisi (Agus)'],
-        ['role' => 'customer', 'label' => 'Customer'],
-        ['role' => 'admin', 'label' => 'Admin'],
-    ];
+    $roleLabels = ['sa' => 'Sales Adviser', 'teknisi' => 'Teknisi', 'customer' => 'Customer', 'admin' => 'Admin'];
 
     $menus = [
         'sa' => [
@@ -82,6 +75,8 @@
         'customer' => [
             ['label' => 'OPERASIONAL', 'items' => [
                 ['text' => 'Portal Servis', 'route' => 'customer.index', 'icon' => 'layout-dashboard'],
+                ['text' => 'Daftar Kendaraan', 'route' => 'customer.vehicles', 'icon' => 'bike'],
+                ['text' => 'Booking Servis', 'route' => 'customer.booking.create', 'icon' => 'calendar-plus'],
                 ['text' => 'Riwayat & Kwitansi', 'route' => 'customer.index', 'anchor' => 'riwayat', 'icon' => 'receipt-text'],
             ]],
         ],
@@ -175,10 +170,13 @@
                     {{ $roleLabels[$role] ?? ($role ?? '-') }}
                 </span>
             </div>
-            <button type="button" onclick="toggleRoleMenu(true)" title="Ganti role demo"
-                    class="nav-hide grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-zinc-800 text-slate-400 transition hover:border-lime-400/50 hover:text-lime-300">
-                <i data-lucide="repeat-2" class="h-4 w-4"></i>
-            </button>
+            <form method="POST" action="{{ route('logout') }}" title="Logout">
+                @csrf
+                <button type="submit"
+                        class="nav-hide grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-zinc-800 text-slate-400 transition hover:border-red-400/50 hover:text-red-400">
+                    <i data-lucide="log-out" class="h-4 w-4"></i>
+                </button>
+            </form>
         </div>
     </div>
 </aside>
@@ -211,38 +209,23 @@
             </div>
 
             <div class="ml-auto flex items-center gap-2">
-                {{-- Role switcher --}}
-                <div class="relative">
-                    <button type="button" id="role-btn" onclick="toggleRoleMenu()"
-                            class="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1.5 pl-1.5 pr-3 text-xs font-bold text-slate-600 shadow-sm transition hover:border-slate-300 hover:shadow">
-                        <span class="grid h-7 w-7 place-items-center rounded-full bg-slate-900 text-[10px] font-black uppercase text-lime-300">
-                            {{ strtoupper(substr($roleLabels[$role] ?? 'G', 0, 2)) }}
-                        </span>
-                        <span class="hidden sm:inline">Switch Role</span>
-                        <i data-lucide="chevron-down" class="h-3.5 w-3.5 text-slate-400"></i>
-                    </button>
-                    <div id="role-menu" class="pop-in absolute right-0 z-50 mt-2 hidden w-60 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/10">
-                        <div class="px-2 pb-1.5 pt-1 text-[10px] font-bold uppercase tracking-wider text-slate-400">Switcher Role Demo</div>
-                         @foreach($demoRoles as $demoRole)
-                             @php($isCurrentDemoRole = $role === $demoRole['role'] && (! isset($demoRole['technician']) || $user?->name === $demoRole['technician']))
-                             <form method="POST" action="{{ route('demo.switch') }}">
-                                 @csrf
-                                 <input type="hidden" name="role" value="{{ $demoRole['role'] }}">
-                                 @isset($demoRole['technician'])<input type="hidden" name="technician" value="{{ $demoRole['technician'] }}">@endisset
-                                 <button type="submit"
-                                         class="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2.5 text-left text-sm font-semibold transition
-                                            {{ $isCurrentDemoRole ? 'bg-lime-50 text-lime-700' : 'text-slate-600 hover:bg-slate-50' }}">
-                                     <span class="grid h-7 w-7 place-items-center rounded-full bg-slate-900 text-[10px] font-black uppercase text-lime-300">
-                                         {{ strtoupper(substr($demoRole['label'], 0, 2)) }}
-                                     </span>
-                                     {{ $demoRole['label'] }}
-                                     @if($isCurrentDemoRole)
-                                        <i data-lucide="check" class="ml-auto h-4 w-4 text-lime-500"></i>
-                                    @endif
-                                </button>
-                            </form>
-                        @endforeach
-                    </div>
+                {{-- User login --}}
+                <div class="flex items-center gap-2 rounded-full border border-slate-200 bg-white py-1.5 pl-1.5 pr-1.5 shadow-sm">
+                    <span class="grid h-7 w-7 place-items-center rounded-full bg-slate-900 text-[10px] font-black uppercase text-lime-300">
+                        {{ strtoupper(substr($roleLabels[$role] ?? 'U', 0, 2)) }}
+                    </span>
+                    <span class="hidden min-w-0 sm:block">
+                        <span class="block max-w-[10rem] truncate text-xs font-bold leading-tight text-slate-700">{{ $user?->name ?? 'Guest' }}</span>
+                        <span class="block text-[10px] font-semibold leading-tight text-slate-400">{{ $roleLabels[$role] ?? ($role ?? '-') }}</span>
+                    </span>
+                    <form method="POST" action="{{ route('logout') }}">
+                        @csrf
+                        <button type="submit" title="Logout"
+                                class="ml-1 inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-red-600 active:scale-95">
+                            <i data-lucide="log-out" class="h-3.5 w-3.5"></i>
+                            <span class="hidden sm:inline">Logout</span>
+                        </button>
+                    </form>
                 </div>
 
                 {{-- Notifikasi --}}
@@ -266,10 +249,6 @@
                     {{ $initials }}
                 </span>
             </div>
-        </div>
-
-        <div class="border-t border-slate-100 bg-lime-50/60 px-4 py-1.5 text-center text-[11px] font-semibold text-lime-700 sm:px-6">
-        Demo Mode — gunakan Switch Role di kanan atas untuk pindah role (SA · Teknisi · Customer · Admin) tanpa login.
         </div>
     </header>
 
@@ -356,22 +335,11 @@
     });
 
     // ---- Dropdowns ----
-    function toggleRoleMenu(force) {
-        const menu = document.getElementById('role-menu');
-        const open = force === true ? true : menu.classList.contains('hidden');
-        menu.classList.toggle('hidden', !open);
-        document.getElementById('notif-menu').classList.add('hidden');
-        if (open && force === true) window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
     function toggleNotifMenu() {
         const menu = document.getElementById('notif-menu');
         menu.classList.toggle('hidden');
-        document.getElementById('role-menu').classList.add('hidden');
     }
     document.addEventListener('click', e => {
-        if (!e.target.closest('#role-btn') && !e.target.closest('#role-menu') && !e.target.closest('[onclick*="toggleRoleMenu"]')) {
-            document.getElementById('role-menu').classList.add('hidden');
-        }
         if (!e.target.closest('#notif-btn') && !e.target.closest('#notif-menu')) {
             document.getElementById('notif-menu').classList.add('hidden');
         }

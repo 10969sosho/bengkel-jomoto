@@ -137,7 +137,7 @@
                 @php($checklist = $serviceOrder->inspection->checklist ?? [])
                 <div class="flex flex-wrap gap-1.5">
                     @foreach($checklist as $item)
-                        @php($color = $item['status'] === 'ok' ? 'bg-lime-50 text-lime-700' : ($item['status'] === 'attention' ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'))
+                        @php($color = $item['status'] === 'ok' ? 'bg-lime-50 text-lime-700' : (in_array($item['status'], ['p', 's', 'attention']) ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'))
                         <span class="rounded-lg px-2 py-1 text-[11px] font-semibold {{ $color }}">{{ $item['label'] }}</span>
                     @endforeach
                 </div>
@@ -182,7 +182,7 @@
 
     {{-- Kolom kanan: estimasi & invoice --}}
     <div class="space-y-5 lg:col-span-2">
-        @if(in_array($serviceOrder->status, ['draft', 'waiting_approval']))
+        @if(in_array($serviceOrder->status, ['draft', 'inspected', 'waiting_approval']))
             {{-- Lembar Estimasi Biaya --}}
             <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
                 <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -202,6 +202,11 @@
                     </div>
                 </div>
 
+                @if(! $serviceOrder->inspection)
+                    <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
+                        Estimasi baru bisa dibuat setelah teknisi mengisi lembar pemeriksaan.
+                    </div>
+                @else
                 <form method="POST" action="{{ route('sa.estimate', $serviceOrder) }}" id="estimate-form">
                     @csrf
                     <div class="mb-4">
@@ -251,11 +256,14 @@
                     <b class="text-slate-700">Data pricelist:</b><br>
                     @foreach($pricelists->groupBy('category') as $cat => $rows)
                         <span class="mr-2 font-semibold text-slate-600">{{ $rows->first()->categoryLabel() }}:</span>
-                        {{ $rows->map(fn($p) => $p->service_name.' (Rp '.number_format($p->price).')')->join(' · ') }}<br>
+                        {{ $rows->map(fn($p) => $p->service_name.' ('.($p->actionPrices() !== []
+                            ? collect($p->actionPrices())->map(fn($price, $action) => $action.' Rp '.number_format($price))->join(' · ')
+                            : 'Rp '.number_format($p->price)).')')->join(' · ') }}<br>
                     @endforeach
                     <b class="text-slate-600">Sub-material:</b>
                     {{ $subMaterials->map(fn($s) => $s->name.' (Rp '.number_format($s->default_price).')')->join(' · ') }}
                 </div>
+                @endif
             </div>
         @else
             {{-- Rincian item read-only --}}
@@ -419,6 +427,7 @@
 </div>
 
 {{-- Data untuk lembar estimasi --}}
+@if($serviceOrder->inspection && in_array($serviceOrder->status, ['draft', 'inspected', 'waiting_approval']))
 <script>
     const pricelist = @json($pricelists->map(fn($p) => ['name' => $p->service_name, 'price' => (int) $p->price]));
     const subMaterials = @json($subMaterials->map(fn($s) => ['name' => $s->name, 'price' => (int) $s->default_price]));
@@ -564,6 +573,7 @@
         }
     });
 </script>
+@endif
 
 @if($serviceOrder->elapsedSeconds() > 0)
 <script>
