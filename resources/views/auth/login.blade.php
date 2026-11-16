@@ -8,46 +8,48 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
-<body class="flex min-h-screen items-center justify-center bg-[#0f1117] px-4 text-slate-700 antialiased">
+<body class="flex min-h-screen items-center justify-center bg-slate-50 px-4 text-slate-800 antialiased">
 <div class="w-full max-w-md fade-in">
     <div class="mb-6 text-center">
-        <span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-lime-300 text-2xl font-black text-black shadow-[0_4px_14px_rgba(163,230,53,.35)]">J</span>
-        <h1 class="mt-4 text-xl font-extrabold tracking-tight text-white">BENGKEL JOMOTO</h1>
-        <p class="mt-1 text-sm text-zinc-500">Program Bengkel · Service &amp; Maintenance</p>
+        <span class="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-lime-400 text-2xl font-black text-slate-900 shadow-[0_4px_14px_rgba(163,230,53,.45)]">J</span>
+        <h1 class="mt-4 text-xl font-extrabold tracking-tight text-slate-900">BENGKEL JOMOTO</h1>
+        <p class="mt-1 text-sm text-slate-500">Program Bengkel · Service &amp; Maintenance</p>
     </div>
 
-    <div class="rounded-3xl border border-zinc-800 bg-zinc-900/70 p-6 shadow-xl">
-        <h2 class="text-sm font-bold uppercase tracking-wider text-zinc-400">Masuk ke akun Anda</h2>
+    <div class="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-xl shadow-slate-200/50">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Masuk ke akun Anda</h2>
 
         @if($errors->any())
-            <div class="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-400">
+            <div class="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-600">
                 {{ $errors->first() }}
             </div>
         @endif
 
-        <form method="POST" action="{{ route('login') }}" class="mt-4 space-y-3">
+        <form method="POST" action="{{ route('login') }}" class="mt-4 space-y-3.5">
             @csrf
             <div>
-                <label for="email" class="mb-1.5 block text-xs font-bold uppercase tracking-wide text-zinc-500">Email</label>
+                <label for="email" class="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">Email</label>
                 <input id="email" type="email" name="email" value="{{ old('email') }}" required autofocus autocomplete="username"
-                       class="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3.5 py-3 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/20">
+                       class="w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-400/20">
             </div>
             <div>
-                <label for="password" class="mb-1.5 block text-xs font-bold uppercase tracking-wide text-zinc-500">Password</label>
+                <label for="password" class="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-500">Password</label>
                 <input id="password" type="password" name="password" required autocomplete="current-password"
-                       class="w-full rounded-xl border border-zinc-700 bg-zinc-900 px-3.5 py-3 text-sm text-white placeholder-zinc-600 outline-none transition focus:border-lime-400/60 focus:ring-2 focus:ring-lime-400/20">
+                       class="w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-3 text-sm text-slate-900 placeholder-slate-400 outline-none transition focus:border-lime-500 focus:bg-white focus:ring-2 focus:ring-lime-400/20">
             </div>
-            <label class="flex items-center gap-2 text-xs font-semibold text-zinc-400">
-                <input type="checkbox" name="remember" value="1" class="h-4 w-4 rounded border-zinc-600 bg-zinc-800 text-lime-400 focus:ring-lime-400/30">
-                Ingat saya
-            </label>
-            <button class="w-full rounded-xl bg-lime-300 px-4 py-3 text-sm font-black text-black transition hover:bg-lime-400 active:scale-[.98]">
+            <div class="flex items-center justify-between text-xs">
+                <label class="flex items-center gap-2 font-semibold text-slate-600 cursor-pointer">
+                    <input type="checkbox" name="remember" value="1" class="h-4 w-4 rounded border-slate-300 text-lime-500 focus:ring-lime-400/30">
+                    Ingat saya
+                </label>
+            </div>
+            <button class="w-full rounded-xl bg-lime-400 px-4 py-3 text-sm font-black text-slate-950 transition hover:bg-lime-500 active:scale-[.98] shadow-sm">
                 Masuk
             </button>
         </form>
 
-        <div class="mt-6 border-t border-zinc-800 pt-4">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-zinc-500">Login cepat akun demo</p>
+        <div class="mt-6 border-t border-slate-100 pt-5">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Login cepat akun demo</p>
             <div class="mt-2.5 grid grid-cols-2 gap-2">
                 @foreach([
                     ['email' => 'admin@jomoto.com', 'label' => 'Admin', 'icon' => 'shield-check'],
@@ -59,8 +61,8 @@
                         @csrf
                         <input type="hidden" name="email" value="{{ $demo['email'] }}">
                         <input type="hidden" name="password" value="password">
-                        <button class="flex w-full items-center gap-2 rounded-xl border border-zinc-700 bg-zinc-900 px-3 py-2.5 text-left text-xs font-bold text-zinc-300 transition hover:border-lime-400/50 hover:text-lime-300 active:scale-[.98]">
-                            <i data-lucide="{{ $demo['icon'] }}" class="h-4 w-4 shrink-0"></i>
+                        <button class="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 text-left text-xs font-bold text-slate-700 transition hover:border-lime-500 hover:bg-lime-50 hover:text-slate-900 active:scale-[.98]">
+                            <i data-lucide="{{ $demo['icon'] }}" class="h-4 w-4 shrink-0 text-slate-500"></i>
                             <span class="truncate">{{ $demo['label'] }}</span>
                         </button>
                     </form>
@@ -69,7 +71,7 @@
         </div>
     </div>
 
-    <p class="mt-5 text-center text-xs text-zinc-600">Program Bengkel Jomoto · Laravel + Blade</p>
+    <p class="mt-6 text-center text-xs text-slate-400">Program Bengkel Jomoto · Laravel + Blade</p>
 </div>
 
 <style>
