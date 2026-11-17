@@ -84,8 +84,9 @@
             ['label' => 'OPERASIONAL', 'items' => [
                 ['text' => 'Dashboard', 'route' => 'admin.index', 'icon' => 'layout-dashboard'],
             ]],
-            ['label' => 'MASTER & CUSTOMER', 'items' => [
-                ['text' => 'Pricelist & Sub-Material', 'route' => 'admin.index', 'anchor' => 'pricelist', 'icon' => 'tags'],
+            ['label' => 'MASTER & KATALOG', 'items' => [
+                ['text' => 'Pricelist Jasa', 'route' => 'admin.pricelist', 'icon' => 'tags'],
+                ['text' => 'Sub Material', 'route' => 'admin.subMaterials', 'icon' => 'package'],
                 ['text' => 'Performa Teknisi', 'route' => 'admin.index', 'anchor' => 'performa', 'icon' => 'chart-no-axes-column-increasing'],
                 ['text' => 'Laporan Pendapatan', 'route' => 'admin.reports', 'icon' => 'chart-no-axes-combined'],
                 ['text' => 'Dokumentasi API', 'route' => 'api-docs', 'icon' => 'braces'],

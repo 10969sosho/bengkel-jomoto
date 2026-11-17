@@ -20,11 +20,13 @@ class AdminController extends Controller
 
         $stats = [
             'orders' => ServiceOrder::count(),
-            'active' => ServiceOrder::whereIn('status', ['draft', 'waiting_approval', 'approved', 'working'])->count(),
+            'active' => ServiceOrder::whereIn('status', ['draft', 'inspected', 'waiting_approval', 'approved', 'working'])->count(),
             'revenue' => (int) $paidRevenue,
             'unpaid' => Invoice::where('payment_status', 'unpaid')->sum('grand_total'),
             'technicians' => User::where('role', 'teknisi')->count(),
             'customers' => User::where('role', 'customer')->count(),
+            'pricelists' => ServicePricelist::count(),
+            'submaterials' => SubMaterialCatalog::count(),
         ];
 
         $recentOrders = ServiceOrder::with(['customer', 'vehicle', 'technician', 'invoice'])
@@ -37,6 +39,35 @@ class AdminController extends Controller
         $technicians = User::where('role', 'teknisi')->withCount('technicianOrders')->orderBy('name')->get();
 
         return view('admin.dashboard', compact('stats', 'recentOrders', 'pricelists', 'subMaterials', 'technicians'));
+    }
+
+    public function pricelist(Request $request): View
+    {
+        $category = $request->query('category', 'all');
+        $search = trim((string) $request->query('q', ''));
+
+        $pricelists = ServicePricelist::query()
+            ->when($category !== 'all', fn ($query) => $query->where('category', $category))
+            ->when($search !== '', fn ($query) => $query->where('service_name', 'like', "%{$search}%"))
+            ->orderBy('category')
+            ->orderBy('service_name')
+            ->get();
+
+        $categories = ServicePricelist::select('category')->distinct()->pluck('category')->all();
+
+        return view('admin.pricelist', compact('pricelists', 'category', 'search', 'categories'));
+    }
+
+    public function subMaterials(Request $request): View
+    {
+        $search = trim((string) $request->query('q', ''));
+
+        $subMaterials = SubMaterialCatalog::query()
+            ->when($search !== '', fn ($query) => $query->where('name', 'like', "%{$search}%"))
+            ->orderBy('name')
+            ->get();
+
+        return view('admin.sub-materials', compact('subMaterials', 'search'));
     }
 
     public function reports(Request $request): View

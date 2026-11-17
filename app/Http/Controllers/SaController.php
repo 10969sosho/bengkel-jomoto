@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Inspection;
 use App\Models\Invoice;
 use App\Models\ServiceOrder;
 use App\Models\ServicePricelist;
@@ -316,6 +317,9 @@ class SaController extends Controller
         $serviceOrder->update([
             'sa_id' => auth()->id(),
             'sa_diagnosis' => $data['sa_diagnosis'] ?? $serviceOrder->sa_diagnosis,
+            'estimate_number' => $serviceOrder->estimate_number ?? ServiceOrder::generateEstimateNumber(),
+            'estimate_discount' => $data['estimate_discount'] ?? ($serviceOrder->estimate_discount ?? 0),
+            'estimate_tax' => $data['estimate_tax'] ?? ($serviceOrder->estimate_tax ?? 0),
         ]);
 
         $serviceOrder->items()->delete();
@@ -415,4 +419,187 @@ class SaController extends Controller
             'requestedServices' => $serviceOrder->requestedServiceLabels(ServicePricelist::pluck('service_name', 'id')->all()),
         ]);
     }
+
+    public function showBooking(ServiceOrder $booking): View
+    {
+        $booking->load(['customer', 'vehicle']);
+        $pricelistNames = ServicePricelist::pluck('service_name', 'id')->all();
+
+        return view('sa.booking-detail', compact('booking', 'pricelistNames'));
+    }
+
+    public function createCheckin(Request $request): View
+    {
+        $booking = null;
+        if ($request->filled('booking_id')) {
+            $booking = ServiceOrder::with(['customer', 'vehicle'])->findOrFail($request->integer('booking_id'));
+        }
+
+        $customers = User::where('role', 'customer')->with('vehicles')->orderBy('name')->get();
+        $technicians = User::where('role', 'teknisi')->orderBy('name')->get();
+        $nextInspectionNumber = Inspection::generateInspectionNumber();
+
+        return view('sa.checkin', [
+            'booking' => $booking,
+            'customers' => $customers,
+            'technicians' => $technicians,
+            'nextInspectionNumber' => $nextInspectionNumber,
+            'documentsChecklist' => Inspection::DOCUMENTS_CHECKLIST,
+            'exteriorSections' => Inspection::EXTERIOR_SECTIONS,
+        ]);
+    }
+
+    public function storeCheckin(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'booking_id' => ['nullable', 'integer', Rule::exists('service_orders', 'id')],
+            'customer_id' => ['required', Rule::exists('users', 'id')->where('role', 'customer')],
+            'vehicle_id' => ['required', Rule::exists('vehicles', 'id')->where('user_id', $request->integer('customer_id'))],
+            'technician_id' => ['required', Rule::exists('users', 'id')->where('role', 'teknisi')],
+            'location_type' => ['required', 'in:onsite,offsite'],
+            'offsite_address' => ['required_if:location_type,offsite', 'nullable', 'string', 'max:1000'],
+            'location_notes' => ['nullable', 'string', 'max:255'],
+            'odometer' => ['required', 'integer', 'min:0'],
+            'fuel_level' => ['required', 'string', 'in:E,1/4,1/2,3/4,F'],
+            'manager_name' => ['nullable', 'string', 'max:100'],
+            'customer_complaint' => ['required', 'string', 'max:2000'],
+            'sa_diagnosis' => ['nullable', 'string', 'max:2000'],
+            'documents' => ['nullable', 'array'],
+            'documents.*' => ['nullable', 'in:ada,tidak'],
+            'exterior' => ['nullable', 'array'],
+            'odometer_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'fuel_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        $vehicle = Vehicle::findOrFail($data['vehicle_id']);
+        $vehicle->update(['last_odometer' => $data['odometer']]);
+
+        $booking = isset($data['booking_id'])
+            ? ServiceOrder::findOrFail($data['booking_id'])
+            : null;
+
+        $order = DB::transaction(function () use ($data, $booking, $vehicle, $request): ServiceOrder {
+            $coupon = ServiceOrder::couponForOdometer($vehicle, $data['odometer'], $booking?->id);
+            $offsite = $data['location_type'] === 'offsite';
+
+            $orderAttributes = [
+                'customer_id' => $data['customer_id'],
+                'vehicle_id' => $data['vehicle_id'],
+                'technician_id' => $data['technician_id'],
+                'sa_id' => auth()->id(),
+                'location_type' => $data['location_type'],
+                'offsite_address' => $offsite ? $data['offsite_address'] : null,
+                'location_notes' => $offsite ? ($data['location_notes'] ?? null) : null,
+                'visit_fee' => $offsite ? 50_000 : 0,
+                'odometer' => $data['odometer'],
+                'service_type' => $coupon['service_type'] ?? ($offsite ? 'home_service' : 'regular'),
+                'coupon_milestone' => $coupon['milestone'] ?? null,
+                'customer_complaint' => $data['customer_complaint'],
+                'sa_diagnosis' => $data['sa_diagnosis'] ?? null,
+                'status' => 'inspected',
+            ];
+
+            if ($booking) {
+                $booking->update($orderAttributes);
+                $serviceOrder = $booking;
+            } else {
+                $serviceOrder = ServiceOrder::create($orderAttributes + [
+                    'wo_number' => ServiceOrder::generateWoNumber(),
+                ]);
+            }
+
+            $odometerPhotoPath = $request->hasFile('odometer_photo')
+                ? $request->file('odometer_photo')->store('inspections', 'public')
+                : ($serviceOrder->inspection?->odometer_photo ?? null);
+
+            $fuelPhotoPath = $request->hasFile('fuel_photo')
+                ? $request->file('fuel_photo')->store('inspections', 'public')
+                : ($serviceOrder->inspection?->fuel_photo ?? null);
+
+            $documentsChecklist = [];
+            foreach (Inspection::DOCUMENTS_CHECKLIST as $docKey => $docLabel) {
+                $documentsChecklist[$docKey] = [
+                    'label' => $docLabel,
+                    'status' => ($data['documents'][$docKey] ?? 'tidak') === 'ada' ? 'ada' : 'tidak',
+                ];
+            }
+
+            $exteriorChecklist = [];
+            foreach (Inspection::EXTERIOR_SECTIONS as $secName => $secItems) {
+                foreach ($secItems as $itemKey => $itemLabel) {
+                    $exteriorChecklist[$itemKey] = [
+                        'section' => $secName,
+                        'label' => $itemLabel,
+                        'condition' => ($data['exterior'][$itemKey] ?? 'G') === 'R' ? 'R' : 'G',
+                    ];
+                }
+            }
+
+            $serviceOrder->inspection()->updateOrCreate(
+                ['service_order_id' => $serviceOrder->id],
+                [
+                    'inspection_number' => $serviceOrder->inspection?->inspection_number ?? Inspection::generateInspectionNumber(),
+                    'inspection_date' => now()->toDateString(),
+                    'technician_id' => $data['technician_id'],
+                    'manager_name' => $data['manager_name'] ?: 'ARTI DEWI',
+                    'fuel_level' => $data['fuel_level'],
+                    'odometer_photo' => $odometerPhotoPath,
+                    'fuel_photo' => $fuelPhotoPath,
+                    'documents_checklist' => $documentsChecklist,
+                    'exterior_checklist' => $exteriorChecklist,
+                ]
+            );
+
+            return $serviceOrder;
+        });
+
+        return redirect()->route('sa.show', $order)
+            ->with('success', "Pemeriksaan awal (Check-in) berhasil disimpan dengan No: {$order->inspection?->inspection_number}. WO masuk ke antrian konfirmasi mekanik.");
+    }
+
+    public function printCheckin(ServiceOrder $serviceOrder): View
+    {
+        $serviceOrder->load(['customer', 'vehicle', 'technician', 'sa', 'inspection']);
+
+        $extChecklist = $serviceOrder->inspection?->exterior_checklist ?? [];
+        $flatItems = [];
+        foreach (Inspection::EXTERIOR_SECTIONS as $secName => $secItems) {
+            foreach ($secItems as $itemKey => $itemLabel) {
+                $cond = $extChecklist[$itemKey]['condition'] ?? 'G';
+                $flatItems[] = ['label' => $itemLabel, 'cond' => $cond];
+            }
+        }
+        $chunks = array_chunk($flatItems, 4);
+
+        return view('sa.print-checkin', [
+            'order' => $serviceOrder,
+            'inspection' => $serviceOrder->inspection,
+            'documentsChecklist' => Inspection::DOCUMENTS_CHECKLIST,
+            'exteriorSections' => Inspection::EXTERIOR_SECTIONS,
+            'chunks' => $chunks,
+        ]);
+    }
+
+    public function issueSpk(ServiceOrder $serviceOrder): RedirectResponse
+    {
+        if ($serviceOrder->status !== 'approved') {
+            return back()->with('error', 'SPK hanya bisa diterbitkan setelah estimasi disetujui customer.');
+        }
+
+        $spkNumber = $serviceOrder->spk_number ?? ServiceOrder::generateSpkNumber();
+        $serviceOrder->update([
+            'spk_number' => $spkNumber,
+            'spk_issued_at' => now(),
+        ]);
+
+        return back()->with('success', "Surat Perintah Kerja (SPK) No: {$spkNumber} berhasil diterbitkan.");
+    }
+
+    public function printSpk(ServiceOrder $serviceOrder): View
+    {
+        $serviceOrder->load(['customer', 'vehicle', 'technician', 'sa', 'items', 'inspection']);
+
+        return view('sa.print-spk', compact('serviceOrder'));
+    }
+
 }

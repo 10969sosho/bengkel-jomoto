@@ -18,10 +18,22 @@
         </p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
+        @if($serviceOrder->inspection)
+            <a href="{{ route('sa.print.checkin', $serviceOrder) }}" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[.98]">
+                <i data-lucide="printer" class="h-4 w-4"></i> Cetak Check-in
+            </a>
+        @endif
         <a href="{{ route('sa.print.estimate', $serviceOrder) }}" target="_blank" rel="noopener"
            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[.98]">
             <i data-lucide="printer" class="h-4 w-4"></i> Cetak Estimasi
         </a>
+        @if($serviceOrder->spk_number)
+            <a href="{{ route('sa.print.spk', $serviceOrder) }}" target="_blank" rel="noopener"
+               class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50 active:scale-[.98]">
+                <i data-lucide="printer" class="h-4 w-4"></i> Cetak SPK
+            </a>
+        @endif
         <span class="rounded-full px-3.5 py-1.5 text-sm font-semibold {{ $serviceOrder->statusColor() }}">{{ $serviceOrder->statusLabel() }}</span>
     </div>
 </div>
@@ -130,25 +142,60 @@
 
         {{-- Inspeksi --}}
         <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
-            <h2 class="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
-                <i data-lucide="clipboard-check" class="h-4 w-4"></i> Lembar Pemeriksaan
-            </h2>
+            <div class="mb-3 flex items-center justify-between">
+                <h2 class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400">
+                    <i data-lucide="clipboard-check" class="h-4 w-4"></i> Lembar Pemeriksaan
+                </h2>
+                @if($serviceOrder->inspection)
+                    <a href="{{ route('sa.print.checkin', $serviceOrder) }}" target="_blank" class="font-mono text-xs font-bold text-slate-500 hover:text-slate-800">
+                        {{ $serviceOrder->inspection->inspection_number }}
+                    </a>
+                @endif
+            </div>
+
             @if($serviceOrder->inspection)
-                @php($checklist = $serviceOrder->inspection->checklist ?? [])
-                <div class="flex flex-wrap gap-1.5">
-                    @foreach($checklist as $item)
-                        @php($color = $item['status'] === 'ok' ? 'bg-lime-50 text-lime-700' : (in_array($item['status'], ['p', 's', 'attention']) ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'))
-                        <span class="rounded-lg px-2 py-1 text-[11px] font-semibold {{ $color }}">{{ $item['label'] }}</span>
-                    @endforeach
+                <div class="mb-3">
+                    @if($serviceOrder->inspection->mechanic_confirmed_at)
+                        <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
+                            <i data-lucide="check-circle" class="h-3.5 w-3.5"></i> Dikonfirmasi Mekanik {{ $serviceOrder->inspection->mechanic_confirmed_at->format('d M H:i') }}
+                        </span>
+                    @else
+                        <span class="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
+                            <i data-lucide="clock" class="h-3.5 w-3.5"></i> Menunggu Konfirmasi Mekanik
+                        </span>
+                    @endif
                 </div>
+
+                @if($serviceOrder->inspection->fuel_level)
+                    <div class="mb-2 text-xs text-slate-500">
+                        Bahan Bakar: <b>{{ $serviceOrder->inspection->fuel_level }}</b> · Odo Masuk: <b>{{ number_format($serviceOrder->odometer) }} KM</b>
+                    </div>
+                @endif
+
+                @php($checklist = $serviceOrder->inspection->checklist ?? [])
+                @if(!empty($checklist))
+                    <div class="flex flex-wrap gap-1.5">
+                        @foreach($checklist as $item)
+                            @php($color = $item['status'] === 'ok' ? 'bg-lime-50 text-lime-700' : (in_array($item['status'], ['p', 's', 'attention']) ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'))
+                            <span class="rounded-lg px-2 py-1 text-[11px] font-semibold {{ $color }}">{{ $item['label'] }}</span>
+                        @endforeach
+                    </div>
+                @endif
+
                 @if($serviceOrder->inspection->findings)
                     <p class="mt-3 text-sm text-slate-600"><b>Temuan:</b> {{ $serviceOrder->inspection->findings }}</p>
                 @endif
                 @if($serviceOrder->inspection->recommendations)
                     <p class="mt-1 text-sm text-slate-600"><b>Rekomendasi:</b> {{ $serviceOrder->inspection->recommendations }}</p>
                 @endif
+                @if($serviceOrder->inspection->mechanic_notes)
+                    <p class="mt-1 text-sm text-slate-500"><b>Catatan Mekanik:</b> {{ $serviceOrder->inspection->mechanic_notes }}</p>
+                @endif
             @else
-                <p class="text-sm text-slate-400">Belum diisi teknisi.</p>
+                <p class="text-sm text-slate-400">Belum ada pemeriksaan awal.</p>
+                <a href="{{ route('sa.checkin.create', ['booking_id' => $serviceOrder->id]) }}" class="mt-2 inline-flex items-center gap-1 text-xs font-bold text-amber-600 hover:underline">
+                    Isi Form Pemeriksaan Awal (Check-in) →
+                </a>
             @endif
         </div>
 
@@ -328,6 +375,42 @@
                         <i data-lucide="check-check" class="h-4 w-4"></i> Catat Persetujuan Estimasi Customer
                     </button>
                 </form>
+            </div>
+        @endif
+
+        @if($serviceOrder->status === 'approved')
+            <div class="rounded-3xl border border-sky-200 bg-sky-50 p-5">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="flex items-center gap-2 font-bold text-sky-900">
+                            <i data-lucide="file-badge" class="h-4 w-4"></i> Tahap 5 — Penerbitan Surat Perintah Kerja (SPK)
+                        </h3>
+                        <p class="mt-1 text-sm text-sky-800">
+                            Estimasi telah disetujui customer{{ $serviceOrder->estimate_approved_at ? ' pada '.$serviceOrder->estimate_approved_at->format('d M Y H:i') : '' }}.
+                            @if($serviceOrder->spk_number)
+                                SPK No: <b class="font-mono text-sky-950">{{ $serviceOrder->spk_number }}</b> diterbitkan {{ $serviceOrder->spk_issued_at?->format('d M Y H:i') }}. Mekanik dapat memulai pengerjaan (start timer).
+                            @else
+                                Terbitkan SPK resmi agar teknisi / mekanik dapat memulai pengerjaan servis (start timer).
+                            @endif
+                        </p>
+                    </div>
+                    <div>
+                        @if($serviceOrder->spk_number)
+                            <a href="{{ route('sa.print.spk', $serviceOrder) }}" target="_blank" rel="noopener"
+                               class="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-sky-700 active:scale-[.98]">
+                                <i data-lucide="printer" class="h-4 w-4"></i> Cetak SPK
+                            </a>
+                        @else
+                            <form method="POST" action="{{ route('sa.spk.issue', $serviceOrder) }}">
+                                @csrf
+                                <button type="submit"
+                                        class="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sky-700 active:scale-[.98]">
+                                    <i data-lucide="file-check" class="h-4 w-4"></i> Terbitkan SPK Sekarang
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
             </div>
         @endif
 

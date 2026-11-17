@@ -35,6 +35,12 @@ Route::middleware('role:sa')->prefix('sa')->name('sa.')->group(function () {
     Route::post('/wo/{serviceOrder}/approve', [SaController::class, 'approve'])->name('approve');
     Route::post('/wo/{serviceOrder}/final-check', [SaController::class, 'finalCheck'])->name('finalCheck');
     Route::post('/wo/{serviceOrder}/confirm', [SaController::class, 'confirmResult'])->name('confirm');
+    Route::get('/bookings/{booking}', [SaController::class, 'showBooking'])->name('bookings.show');
+    Route::get('/checkin', [SaController::class, 'createCheckin'])->name('checkin.create');
+    Route::post('/checkin', [SaController::class, 'storeCheckin'])->name('checkin.store');
+    Route::get('/wo/{serviceOrder}/print-checkin', [SaController::class, 'printCheckin'])->name('print.checkin');
+    Route::post('/wo/{serviceOrder}/spk', [SaController::class, 'issueSpk'])->name('spk.issue');
+    Route::get('/wo/{serviceOrder}/print-spk', [SaController::class, 'printSpk'])->name('print.spk');
     Route::post('/wo/{serviceOrder}/invoice', [SaController::class, 'issueInvoice'])->name('invoice');
     Route::get('/wo/{serviceOrder}/print-estimate', [SaController::class, 'printEstimate'])->name('print.estimate');
     Route::post('/invoices/{invoice}/pay', [InvoiceController::class, 'pay'])->name('invoices.pay');
@@ -44,6 +50,7 @@ Route::middleware('role:teknisi')->prefix('teknisi')->name('teknisi.')->group(fu
     Route::get('/', [TeknisiController::class, 'index'])->name('index');
     Route::get('/wo/{serviceOrder}/inspect', [TeknisiController::class, 'inspect'])->name('inspect');
     Route::post('/wo/{serviceOrder}/inspect', [TeknisiController::class, 'saveInspection'])->name('inspect.save');
+    Route::post('/wo/{serviceOrder}/confirm-inspection', [TeknisiController::class, 'confirmInspection'])->name('confirmInspection');
     Route::post('/wo/{serviceOrder}/timer', [TeknisiController::class, 'timer'])->name('timer');
     Route::post('/wo/{serviceOrder}/complete', [TeknisiController::class, 'complete'])->name('complete');
 });
@@ -60,6 +67,8 @@ Route::middleware('role:customer')->prefix('customer')->name('customer.')->group
 
 Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('index');
+    Route::get('/pricelist', [AdminController::class, 'pricelist'])->name('pricelist');
+    Route::get('/sub-materials', [AdminController::class, 'subMaterials'])->name('subMaterials');
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
 });
 

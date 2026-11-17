@@ -52,8 +52,9 @@
         </div>
         <div class="text-right">
             <div class="text-xs font-bold uppercase tracking-widest text-slate-400">Lembar Estimasi Servis</div>
-            <div class="text-xl font-black text-slate-900">{{ $serviceOrder->wo_number }}</div>
-            <div class="mt-1 text-xs text-slate-500">Tanggal: {{ $serviceOrder->created_at->format('d F Y H:i') }}</div>
+            <div class="font-mono text-lg font-black text-slate-900">{{ $serviceOrder->estimate_number ?? $serviceOrder->wo_number }}</div>
+            <div class="font-mono text-xs font-semibold text-slate-500">WO: {{ $serviceOrder->wo_number }}</div>
+            <div class="mt-0.5 text-xs text-slate-500">Tanggal: {{ $serviceOrder->created_at->format('d F Y H:i') }}</div>
         </div>
     </div>
 

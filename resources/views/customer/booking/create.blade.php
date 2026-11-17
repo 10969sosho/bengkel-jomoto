@@ -86,26 +86,20 @@
                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">
                     Katalog Layanan <span class="text-red-500">*</span>
                 </label>
-                <p class="mb-2 text-xs text-slate-400">Pilih layanan yang dibutuhkan. Badge aksi: <b>P</b> Perbaikan · <b>S</b> Servis · <b>G</b> Ganti. Harga mengikuti pricelist bengkel dan dikonfirmasi lewat lembar estimasi.</p>
+                <p class="mb-2 text-xs text-slate-400">Pilih layanan servis yang dibutuhkan pada kendaraan Anda. Estimasi biaya akhir akan dikonfirmasi lewat lembar estimasi oleh Sales Adviser.</p>
                 <div class="grid gap-2 sm:grid-cols-2">
                     @foreach($pricelists->groupBy('category') as $category => $rows)
-                        <div class="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
-                            <div class="mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ $rows->first()->categoryLabel() }}</div>
-                            <div class="grid gap-1.5 sm:grid-cols-2">
+                        <div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-4 sm:col-span-2">
+                            <div class="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ $rows->first()->categoryLabel() }}</div>
+                            <div class="grid gap-2 sm:grid-cols-2">
                                 @foreach($rows as $pricelist)
-                                    @php($actions = $pricelist->actionPrices())
-                                    <label class="flex cursor-pointer items-start gap-2 rounded-lg bg-white px-2.5 py-2 text-xs text-slate-700 transition hover:border-lime-300 hover:ring-1 hover:ring-lime-200">
+                                    <label class="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200/80 bg-white p-3 text-xs text-slate-700 transition hover:border-lime-400 hover:ring-2 hover:ring-lime-100">
                                         <input type="checkbox" name="requested_services[]" value="{{ $pricelist->id }}"
                                                @checked(in_array((string) $pricelist->id, array_map('strval', old('requested_services', []))))
                                                class="mt-0.5 h-4 w-4 rounded border-slate-300 text-lime-500 focus:ring-lime-400">
                                         <span class="min-w-0 flex-1">
-                                            <span class="block font-semibold text-slate-800">{{ $pricelist->service_name }}</span>
-                                        </span>
-                                        <span class="flex shrink-0 gap-1">
-                                            @foreach($actions as $action => $price)
-                                                <span class="grid h-5 w-5 place-items-center rounded-md bg-slate-900 text-[10px] font-black text-lime-300"
-                                                      title="Aksi {{ $action }}">{{ $action }}</span>
-                                            @endforeach
+                                            <span class="block font-bold text-slate-900 text-[13px]">{{ $pricelist->service_name }}</span>
+                                            <span class="block text-[11px] text-slate-400 mt-0.5">Estimasi acuan: Rp {{ number_format($pricelist->price) }}</span>
                                         </span>
                                     </label>
                                 @endforeach

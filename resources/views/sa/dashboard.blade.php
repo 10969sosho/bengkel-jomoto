@@ -91,12 +91,13 @@
                         </td>
                         <td class="px-5 py-3.5 text-right">
                             <div class="flex flex-wrap items-center justify-end gap-1.5">
-                                <button type="button" data-booking-detail="{{ $booking->id }}"
-                                        class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:bg-slate-50">
-                                    <i data-lucide="eye" class="h-3.5 w-3.5"></i> Detail Booking
-                                </button>
-                                <a href="{{ route('sa.create', ['booking_id' => $booking->id]) }}" class="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-amber-600">
-                                    Proses jadi WO <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
+                                <a href="{{ route('sa.bookings.show', $booking) }}"
+                                   class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-95">
+                                    <i data-lucide="eye" class="h-3.5 w-3.5"></i> Lihat Detail Booking
+                                </a>
+                                <a href="{{ route('sa.checkin.create', ['booking_id' => $booking->id]) }}"
+                                   class="inline-flex items-center gap-1.5 rounded-xl bg-amber-500 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-amber-600 active:scale-95">
+                                    Lanjutkan Pemeriksaan Awal <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
                                 </a>
                             </div>
                         </td>

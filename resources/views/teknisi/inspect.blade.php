@@ -40,6 +40,28 @@
             @endif
         </div>
 
+        @if($order->inspection)
+            <div class="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2">
+                    <div class="text-xs font-bold uppercase tracking-wide text-slate-400">Hasil Check-in Sales Adviser</div>
+                    <span class="font-mono text-xs font-bold text-slate-700">No: {{ $order->inspection->inspection_number }}</span>
+                </div>
+                <div class="mt-2.5 grid grid-cols-2 gap-2 text-xs text-slate-600 sm:grid-cols-4">
+                    <div><span class="text-slate-400">BBM:</span> <b>{{ $order->inspection->fuel_level ?? "—" }}</b></div>
+                    <div><span class="text-slate-400">Manager:</span> <b>{{ $order->inspection->manager_name ?? "ARTI DEWI" }}</b></div>
+                    <div><span class="text-slate-400">Tanggal:</span> <b>{{ optional($order->inspection->inspection_date)->format("d M Y") ?? "—" }}</b></div>
+                    <div>
+                        <span class="text-slate-400">Status:</span>
+                        @if($order->inspection->mechanic_confirmed_at)
+                            <b class="text-emerald-700">Terkonfirmasi</b>
+                        @else
+                            <b class="text-amber-700">Menunggu ACC</b>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <form method="POST" enctype="multipart/form-data" action="{{ route('teknisi.inspect.save', $order) }}" class="mt-5">
             @csrf
 
@@ -104,8 +126,8 @@
 
             <div class="mt-5 flex justify-end gap-2 border-t border-slate-100 pt-4">
                 <a href="{{ route('teknisi.index') }}" class="rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">Batal</a>
-                <button class="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 active:scale-[.98]">
-                    Simpan Lembar Pemeriksaan
+                <button class="rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-bold text-lime-300 shadow-sm transition hover:bg-slate-700 active:scale-[.98]">
+                    Simpan &amp; Konfirmasi Pemeriksaan
                 </button>
             </div>
         </form>

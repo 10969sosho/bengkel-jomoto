@@ -81,65 +81,41 @@
         </div>
 
         <div class="grid gap-5 sm:grid-cols-2">
-            <div id="pricelist" class="scroll-mt-28 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
-                <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-4 font-bold text-slate-900">
-                    <span class="grid h-7 w-7 place-items-center rounded-lg bg-lime-300 text-black">
-                        <i data-lucide="tags" class="h-4 w-4"></i>
-                    </span>
-                    Pricelist Servis
-                </div>
-                <div class="max-h-80 overflow-y-auto">
-                    <table class="w-full text-sm">
-                        <tbody class="divide-y divide-slate-100">
-                            @foreach($pricelists as $p)
-                                <tr class="{{ $p->is_active ? '' : 'opacity-40' }}">
-                                    <td class="px-4 py-2.5">
-                                        {{ $p->service_name }}
-                                        <span class="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">{{ $p->categoryLabel() }}</span>
-                                    </td>
-                                    <td class="px-4 py-2.5 text-right font-bold text-slate-700">
-                                        @php($actions = $p->actionPrices())
-                                        @if($actions !== [])
-                                            <span class="flex flex-wrap justify-end gap-1">
-                                                @foreach($actions as $action => $price)
-                                                    <span class="rounded-md bg-slate-900 px-1.5 py-0.5 text-[10px] font-black text-lime-300">{{ $action }}</span>
-                                                    <span class="mr-1 font-semibold text-slate-600">Rp {{ number_format($price) }}</span>
-                                                @endforeach
-                                            </span>
-                                        @else
-                                            Rp {{ number_format($p->price) }}
-                                        @endif
-                                    </td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
+            <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <span class="grid h-9 w-9 place-items-center rounded-xl bg-lime-300 text-black">
+                            <i data-lucide="tags" class="h-4 w-4"></i>
+                        </span>
+                        <div>
+                            <h3 class="font-bold text-slate-900">Pricelist Jasa Standar</h3>
+                            <p class="text-xs text-slate-400">{{ $pricelists->count() }} paket jasa servis terdaftar</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('admin.pricelist') }}"
+                       class="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800">
+                        Kelola <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
+                    </a>
                 </div>
             </div>
 
-            <div class="scroll-mt-28 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm">
-                <div class="flex items-center gap-2 border-b border-slate-100 px-5 py-4 font-bold text-slate-900">
-                    <span class="grid h-7 w-7 place-items-center rounded-lg bg-lime-300 text-black">
-                        <i data-lucide="package-open" class="h-4 w-4"></i>
-                    </span>
-                    Katalog Sub-Material
+            <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2.5">
+                        <span class="grid h-9 w-9 place-items-center rounded-xl bg-lime-300 text-black">
+                            <i data-lucide="package" class="h-4 w-4"></i>
+                        </span>
+                        <div>
+                            <h3 class="font-bold text-slate-900">Katalog Sub-Material</h3>
+                            <p class="text-xs text-slate-400">{{ $subMaterials->count() }} tindakan/bahan pendukung</p>
+                        </div>
+                    </div>
+                    <a href="{{ route('admin.subMaterials') }}"
+                       class="inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800">
+                        Kelola <i data-lucide="arrow-right" class="h-3.5 w-3.5"></i>
+                    </a>
                 </div>
-                <div class="max-h-80 overflow-y-auto">
-                    <table class="w-full text-sm">
-                        <tbody class="divide-y divide-slate-100">
-                            @foreach($subMaterials as $s)
-                                <tr class="{{ $s->is_active ? '' : 'opacity-40' }}">
-                                    <td class="px-4 py-2.5">
-                                        {{ $s->name }}
-                                        <span class="block text-xs text-slate-400">{{ $s->description }}</span>
-                                    </td>
-                                    <td class="px-4 py-2.5 text-right font-bold text-slate-700">Rp {{ number_format($s->default_price) }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+            </div></div>
         </div>
     </div>
 

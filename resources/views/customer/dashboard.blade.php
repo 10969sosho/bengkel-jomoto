@@ -147,8 +147,11 @@
                             <i data-lucide="file-check-2" class="h-4 w-4"></i>
                         </span>
                         <h4 class="font-bold text-amber-900">Persetujuan Estimasi · Tahap 1 dari 2</h4>
+                        @if($order->estimate_number)
+                            <span class="font-mono text-xs font-bold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded-lg">No: {{ $order->estimate_number }}</span>
+                        @endif
                     </div>
-                    <p class="mt-1 text-xs text-amber-700">Setujui jenis pekerjaan, sparepart, dan estimasi biaya sebelum mekanik mulai bekerja.</p>
+                    <p class="mt-1 text-xs text-amber-700">Setujui rincian jenis pekerjaan, sparepart, dan estimasi biaya sebelum pengerjaan teknisi dimulai.</p>
 
                     <div class="mt-3 overflow-x-auto rounded-xl bg-white">
                         <table class="w-full text-sm">

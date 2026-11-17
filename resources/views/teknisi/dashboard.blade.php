@@ -92,6 +92,21 @@
                 </div>
             </div>
 
+            @if($order->inspection && !$order->inspection->mechanic_confirmed_at)
+                <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 p-3.5">
+                    <div class="text-xs font-semibold text-amber-900">
+                        <i data-lucide="alert-circle" class="inline h-3.5 w-3.5 text-amber-600"></i>
+                        Check-in SA (No: {{ $order->inspection->inspection_number }}) menunggu konfirmasi mekanik sebelum estimasi biaya dibuat.
+                    </div>
+                    <form method="POST" action="{{ route('teknisi.confirmInspection', $order) }}">
+                        @csrf
+                        <button type="submit" class="rounded-xl bg-amber-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-amber-600 active:scale-95">
+                            Konfirmasi Pemeriksaan Awal
+                        </button>
+                    </form>
+                </div>
+            @endif
+
             <div class="mt-4 grid gap-3 sm:grid-cols-3">
                 <a href="{{ route('teknisi.inspect', $order) }}"
                    class="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 active:scale-[.98]">

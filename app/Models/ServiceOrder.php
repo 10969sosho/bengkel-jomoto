@@ -36,6 +36,12 @@ class ServiceOrder extends Model
         'visit_fee',
         'odometer',
         'coupon_milestone',
+        'estimate_number',
+        'spk_number',
+        'spk_issued_at',
+        'work_start_time',
+        'estimate_discount',
+        'estimate_tax',
     ];
 
     protected function casts(): array
@@ -51,6 +57,9 @@ class ServiceOrder extends Model
             'visit_fee' => 'integer',
             'odometer' => 'integer',
             'coupon_milestone' => 'integer',
+            'spk_issued_at' => 'datetime',
+            'estimate_discount' => 'decimal:2',
+            'estimate_tax' => 'decimal:2',
         ];
     }
 
@@ -347,5 +356,38 @@ class ServiceOrder extends Model
         $seq = $last ? ((int) substr($last, -4)) + 1 : 1;
 
         return $prefix.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
+    }
+    public function isMechanicConfirmed(): bool
+    {
+        return $this->inspection?->mechanic_confirmed_at !== null;
+    }
+
+    public function isSpkIssued(): bool
+    {
+        return $this->spk_number !== null;
+    }
+
+    public static function generateEstimateNumber(): string
+    {
+        $prefix = 'PW/'.now()->format('Y/m').'/';
+        $last = static::where('estimate_number', 'like', $prefix.'%')
+            ->orderByDesc('estimate_number')
+            ->value('estimate_number');
+
+        $seq = $last ? ((int) substr($last, -5)) + 1 : 1;
+
+        return $prefix.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
+    }
+
+    public static function generateSpkNumber(): string
+    {
+        $prefix = 'SOJ/'.now()->format('Y/m').'/';
+        $last = static::where('spk_number', 'like', $prefix.'%')
+            ->orderByDesc('spk_number')
+            ->value('spk_number');
+
+        $seq = $last ? ((int) substr($last, -5)) + 1 : 1;
+
+        return $prefix.str_pad((string) $seq, 5, '0', STR_PAD_LEFT);
     }
 }

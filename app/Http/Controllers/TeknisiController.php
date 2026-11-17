@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Inspection;
 use App\Models\Invoice;
 use App\Models\ServiceOrder;
 use App\Models\WorkLog;
@@ -81,6 +82,7 @@ class TeknisiController extends Controller
                 'recommendations' => $data['recommendations'] ?? null,
                 'before_photos' => array_slice($beforePhotos, -10),
                 'after_photos' => array_slice($afterPhotos, -10),
+                'mechanic_confirmed_at' => $serviceOrder->inspection?->mechanic_confirmed_at ?? now(),
             ],
         );
 
@@ -114,7 +116,10 @@ class TeknisiController extends Controller
                 ]);
 
                 if (! $resuming) {
-                    $serviceOrder->update(['status' => 'working']);
+                    $serviceOrder->update([
+                        'status' => 'working',
+                        'work_start_time' => $serviceOrder->work_start_time ?? now()->format('H:i:s'),
+                    ]);
                 }
 
                 return back()->with('success', $resuming ? 'Timer dilanjutkan kembali.' : 'Timer pengerjaan dimulai.');
@@ -195,6 +200,37 @@ class TeknisiController extends Controller
 
         return redirect()->route('teknisi.index')
             ->with('success', $message);
+    }
+
+    
+    public function confirmInspection(Request $request, ServiceOrder $serviceOrder): RedirectResponse
+    {
+        $this->guard($serviceOrder);
+
+        $data = $request->validate([
+            'mechanic_notes' => ['nullable', 'string', 'max:2000'],
+            'findings' => ['nullable', 'string', 'max:3000'],
+            'recommendations' => ['nullable', 'string', 'max:3000'],
+        ]);
+
+        $inspection = $serviceOrder->inspection;
+        if (! $inspection) {
+            $inspection = $serviceOrder->inspection()->create([
+                'technician_id' => auth()->id(),
+                'inspection_number' => Inspection::generateInspectionNumber(),
+                'inspection_date' => now()->toDateString(),
+            ]);
+        }
+
+        $inspection->update([
+            'technician_id' => auth()->id(),
+            'mechanic_confirmed_at' => now(),
+            'mechanic_notes' => $data['mechanic_notes'] ?? $inspection->mechanic_notes,
+            'findings' => $data['findings'] ?? $inspection->findings,
+            'recommendations' => $data['recommendations'] ?? $inspection->recommendations,
+        ]);
+
+        return back()->with('success', "Pemeriksaan awal {$serviceOrder->wo_number} telah dikonfirmasi mekanik. Sales Adviser dapat melanjutkan pembuatan lembar estimasi biaya.");
     }
 
     private function guard(ServiceOrder $order): void
