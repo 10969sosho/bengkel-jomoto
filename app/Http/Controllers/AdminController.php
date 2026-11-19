@@ -121,4 +121,90 @@ class AdminController extends Controller
             $query->whereYear($column, now()->year)->whereMonth($column, now()->month);
         }
     }
+
+    public function storePricelist(Request $request)
+    {
+        $data = $request->validate([
+            'service_name' => ['required', 'string', 'max:255'],
+            'category' => ['required', 'string', 'max:50'],
+            'price' => ['required', 'integer', 'min:0'],
+            'price_p' => ['nullable', 'integer', 'min:0'],
+            'price_s' => ['nullable', 'integer', 'min:0'],
+            'price_g' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $data['is_active'] = $request->boolean('is_active', true);
+
+        ServicePricelist::create($data);
+
+        return redirect()->route('admin.pricelist')->with('success', 'Layanan pricelist baru berhasil ditambahkan.');
+    }
+
+    public function updatePricelist(Request $request, ServicePricelist $pricelist)
+    {
+        $data = $request->validate([
+            'service_name' => ['required', 'string', 'max:255'],
+            'category' => ['required', 'string', 'max:50'],
+            'price' => ['required', 'integer', 'min:0'],
+            'price_p' => ['nullable', 'integer', 'min:0'],
+            'price_s' => ['nullable', 'integer', 'min:0'],
+            'price_g' => ['nullable', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $data['is_active'] = $request->boolean('is_active');
+
+        $pricelist->update($data);
+
+        return redirect()->route('admin.pricelist')->with('success', 'Layanan pricelist berhasil diperbarui.');
+    }
+
+    public function destroyPricelist(ServicePricelist $pricelist)
+    {
+        $name = $pricelist->service_name;
+        $pricelist->delete();
+
+        return redirect()->route('admin.pricelist')->with('success', "Layanan {$name} berhasil dihapus.");
+    }
+
+    public function storeSubMaterial(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'default_price' => ['required', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $data['is_active'] = $request->boolean('is_active', true);
+
+        SubMaterialCatalog::create($data);
+
+        return redirect()->route('admin.subMaterials')->with('success', 'Sub-material baru berhasil ditambahkan.');
+    }
+
+    public function updateSubMaterial(Request $request, SubMaterialCatalog $subMaterial)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string', 'max:1000'],
+            'default_price' => ['required', 'integer', 'min:0'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+
+        $data['is_active'] = $request->boolean('is_active');
+
+        $subMaterial->update($data);
+
+        return redirect()->route('admin.subMaterials')->with('success', 'Sub-material berhasil diperbarui.');
+    }
+
+    public function destroySubMaterial(SubMaterialCatalog $subMaterial)
+    {
+        $name = $subMaterial->name;
+        $subMaterial->delete();
+
+        return redirect()->route('admin.subMaterials')->with('success', "Sub-material {$name} berhasil dihapus.");
+    }
 }

@@ -17,6 +17,8 @@ class ServiceOrder extends Model
         'sa_id',
         'technician_id',
         'customer_complaint',
+        'complaint_category',
+        'visit_date',
         'requested_services',
         'inspection_checklist',
         'stnk_photo',
@@ -58,6 +60,7 @@ class ServiceOrder extends Model
             'odometer' => 'integer',
             'coupon_milestone' => 'integer',
             'spk_issued_at' => 'datetime',
+            'visit_date' => 'date',
             'estimate_discount' => 'decimal:2',
             'estimate_tax' => 'decimal:2',
         ];
@@ -357,6 +360,7 @@ class ServiceOrder extends Model
 
         return $prefix.str_pad((string) $seq, 4, '0', STR_PAD_LEFT);
     }
+
     public function isMechanicConfirmed(): bool
     {
         return $this->inspection?->mechanic_confirmed_at !== null;

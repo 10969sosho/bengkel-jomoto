@@ -106,22 +106,24 @@
 
     <div class="grid-2">
         <div class="box">
-            <div class="box-title">Data Pelanggan</div>
+            <div class="box-title">Data Pelanggan &amp; Petugas</div>
             <div class="info-row"><span class="info-label">Nama Pelanggan:</span><span class="info-val">{{ $order->customer?->name }}</span></div>
-            <div class="info-row"><span class="info-label">No. Telepon / HP:</span><span class="info-val">{{ $order->customer?->phone ?: '—' }}</span></div>
-            <div class="info-row"><span class="info-label">Tipe Servis:</span><span class="info-val">{{ $order->location_type === 'offsite' ? 'Home Service (Panggilan)' : 'Di Bengkel' }}</span></div>
-            @if($order->location_type === 'offsite')
-                <div class="info-row"><span class="info-label">Alamat:</span><span class="info-val">{{ $order->offsite_address }}</span></div>
-            @endif
+            <div class="info-row"><span class="info-label">Alamat:</span><span class="info-val">{{ $order->customer?->address ?: ($order->offsite_address ?: '—') }}</span></div>
+            <div class="info-row"><span class="info-label">No. Telepon / HP:</span><span class="info-val">{{ $order->customer?->phone ?: ($order->customer?->whatsapp ?: '—') }}</span></div>
+            <div class="info-row"><span class="info-label">Service Advisor:</span><span class="info-val">{{ $inspection->sa_name ?: ($order->sa?->name ?? 'Sales Adviser') }}</span></div>
+            <div class="info-row"><span class="info-label">Mekanik:</span><span class="info-val" style="color: #0369a1;">{{ $order->technician?->name ?? '—' }}</span></div>
+            <div class="info-row"><span class="info-label">Manager:</span><span class="info-val">{{ $inspection->manager_name ?? 'ARTI DEWI' }}</span></div>
         </div>
 
         <div class="box">
             <div class="box-title">Data Kendaraan</div>
-            <div class="info-row"><span class="info-label">No. Polisi:</span><span class="info-val" style="font-family: monospace;">{{ $order->vehicle?->plate_number }}</span></div>
-            <div class="info-row"><span class="info-label">Merk / Tipe:</span><span class="info-val">{{ $order->vehicle?->fullName() }}</span></div>
-            <div class="info-row"><span class="info-label">Tahun / BBM:</span><span class="info-val">{{ $order->vehicle?->year }} · {{ $order->vehicle?->fuelLabel() }}</span></div>
-            <div class="info-row"><span class="info-label">Odometer Masuk:</span><span class="info-val">{{ number_format($order->odometer ?? $order->vehicle?->last_odometer ?? 0) }} KM</span></div>
-            <div class="info-row"><span class="info-label">Bahan Bakar:</span><span class="info-val">{{ $inspection->fuel_level ?? '1/2' }} Tangki</span></div>
+            <div class="info-row"><span class="info-label">No. Polisi:</span><span class="info-val" style="font-family: monospace; font-weight: 800;">{{ $order->vehicle?->plate_number }}</span></div>
+            <div class="info-row"><span class="info-label">Merk / Tipe:</span><span class="info-val">{{ $order->vehicle?->brand }} / {{ $order->vehicle?->model }}</span></div>
+            <div class="info-row"><span class="info-label">No. Seri / Mesin:</span><span class="info-val" style="font-family: monospace;">{{ $order->vehicle?->serial_number ?: ($order->vehicle?->engine_number ?: '—') }}</span></div>
+            <div class="info-row"><span class="info-label">Nomor Rangka:</span><span class="info-val" style="font-family: monospace;">{{ $order->vehicle?->chassis_number ?: '—' }}</span></div>
+            <div class="info-row"><span class="info-label">Tahun / Transmisi:</span><span class="info-val">{{ $order->vehicle?->year }} · {{ $order->vehicle?->transmission ?: 'Otomatis / CVT' }}</span></div>
+            <div class="info-row"><span class="info-label">Jenis Mesin:</span><span class="info-val">{{ $order->vehicle?->engine_type ?: ($order->vehicle?->fuel_type === 'electric' ? 'Listrik BLDC' : 'Bensin 4-Tak') }}</span></div>
+            <div class="info-row"><span class="info-label">Odometer / BBM:</span><span class="info-val">{{ number_format($order->odometer ?? $order->vehicle?->last_odometer ?? 0) }} KM · {{ $inspection->fuel_level ?? '1/2' }} Tangki</span></div>
         </div>
     </div>
 

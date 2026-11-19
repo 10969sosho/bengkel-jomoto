@@ -31,6 +31,8 @@ class ServiceAdviserWorkflowTest extends TestCase
         $this->actingAs($sa)->get(route('sa.index'))
             ->assertOk()->assertSee('Booking Service Masuk')->assertSee('Booking keluhan rem');
         $this->actingAs($sa)->get(route('sa.create', ['booking_id' => $booking->id]))
+            ->assertRedirect(route('sa.checkin.create', ['booking_id' => $booking->id]));
+        $this->actingAs($sa)->get(route('sa.checkin.create', ['booking_id' => $booking->id]))
             ->assertOk()->assertSee('Booking keluhan rem')->assertSee('value="1200"', false);
 
         $response = $this->actingAs($sa)->post(route('sa.store'), [

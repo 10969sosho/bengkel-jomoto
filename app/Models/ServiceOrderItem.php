@@ -13,6 +13,7 @@ class ServiceOrderItem extends Model
         'item_name',
         'quantity',
         'unit_price',
+        'discount',
         'subtotal',
         'is_free',
         'free_reason',
@@ -23,6 +24,7 @@ class ServiceOrderItem extends Model
         return [
             'quantity' => 'integer',
             'unit_price' => 'integer',
+            'discount' => 'decimal:2',
             'subtotal' => 'integer',
             'is_free' => 'boolean',
         ];

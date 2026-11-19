@@ -62,7 +62,7 @@
                 ['text' => 'Kasir & Pembayaran', 'route' => 'sa.payments.index', 'icon' => 'wallet-cards'],
             ]],
             ['label' => 'LAYANAN & ESTIMASI', 'items' => [
-                ['text' => 'Buat WO Baru', 'route' => 'sa.create', 'icon' => 'file-plus-2'],
+                ['text' => 'Buat WO Baru', 'route' => 'sa.checkin.create', 'icon' => 'file-plus-2'],
                 ['text' => 'Kelola Pelanggan', 'route' => 'sa.customers.index', 'icon' => 'users-round'],
                 ['text' => 'Dokumentasi API', 'route' => 'api-docs', 'icon' => 'braces'],
             ]],

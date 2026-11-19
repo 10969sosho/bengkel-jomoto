@@ -122,12 +122,15 @@ class CustomerController extends Controller
             return back()->with('error', 'Hanya estimasi yang masih menunggu persetujuan yang bisa disetujui.');
         }
 
+        $spkNumber = $serviceOrder->spk_number ?? ServiceOrder::generateSpkNumber();
         $serviceOrder->update([
             'status' => 'approved',
             'estimate_approved_at' => now(),
+            'spk_number' => $spkNumber,
+            'spk_issued_at' => $serviceOrder->spk_issued_at ?? now(),
         ]);
 
-        return back()->with('success', "Estimasi {$serviceOrder->wo_number} disetujui. Teknisi dapat mulai mengerjakan.");
+        return back()->with('success', "Estimasi {$serviceOrder->wo_number} disetujui. Surat Perintah Kerja (SPK) No: {$spkNumber} telah diterbitkan dan teknisi mulai mengerjakan.");
     }
 
     public function confirmResult(Request $request, ServiceOrder $serviceOrder): RedirectResponse

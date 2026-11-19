@@ -68,7 +68,15 @@ Route::middleware('role:customer')->prefix('customer')->name('customer.')->group
 Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/', [AdminController::class, 'index'])->name('index');
     Route::get('/pricelist', [AdminController::class, 'pricelist'])->name('pricelist');
+    Route::post('/pricelist', [AdminController::class, 'storePricelist'])->name('pricelist.store');
+    Route::put('/pricelist/{pricelist}', [AdminController::class, 'updatePricelist'])->name('pricelist.update');
+    Route::delete('/pricelist/{pricelist}', [AdminController::class, 'destroyPricelist'])->name('pricelist.destroy');
+
     Route::get('/sub-materials', [AdminController::class, 'subMaterials'])->name('subMaterials');
+    Route::post('/sub-materials', [AdminController::class, 'storeSubMaterial'])->name('subMaterials.store');
+    Route::put('/sub-materials/{subMaterial}', [AdminController::class, 'updateSubMaterial'])->name('subMaterials.update');
+    Route::delete('/sub-materials/{subMaterial}', [AdminController::class, 'destroySubMaterial'])->name('subMaterials.destroy');
+
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
 });
 

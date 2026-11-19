@@ -10,7 +10,7 @@
         <h1 class="text-xl font-bold text-slate-900">Dashboard Sales Adviser</h1>
         <p class="text-sm text-slate-500">Kelola Work Order, assign teknisi, estimasi biaya, dan pembayaran.</p>
     </div>
-    <a href="{{ route('sa.create') }}"
+    <a href="{{ route('sa.checkin.create') }}"
        class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-slate-700 active:scale-[.98]">
         <i data-lucide="plus" class="h-4 w-4"></i> Buat WO Baru
     </a>

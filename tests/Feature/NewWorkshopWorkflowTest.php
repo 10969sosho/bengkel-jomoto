@@ -7,9 +7,7 @@ use App\Models\ServiceOrder;
 use App\Models\ServicePricelist;
 use App\Models\SubMaterialCatalog;
 use App\Models\User;
-use App\Models\Vehicle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -269,16 +267,16 @@ class NewWorkshopWorkflowTest extends TestCase
             ->assertSee('Roller Set PCX')
             ->assertSee('TOTAL ESTIMASI');
 
-        // Stage 4: Customer confirms / approves estimate
+        // Stage 4: Customer confirms / approves estimate -> SPK auto generated / available
         $customerApprovalResponse = $this->actingAs($customer)->post(route('customer.orders.approve', $booking));
         $customerApprovalResponse->assertSessionHasNoErrors();
         $booking->refresh();
 
         $this->assertSame('approved', $booking->status);
         $this->assertNotNull($booking->estimate_approved_at);
+        $this->assertNotNull($booking->spk_number);
 
-        // Stage 5: SA issues SPK
-        $this->assertNull($booking->spk_number);
+        // Stage 5: SA can re-issue or view SPK
         $spkResponse = $this->actingAs($sa)->post(route('sa.spk.issue', $booking));
         $spkResponse->assertSessionHasNoErrors();
         $booking->refresh();

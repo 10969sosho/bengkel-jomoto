@@ -19,6 +19,7 @@ class User extends Authenticatable
         'password',
         'phone',
         'whatsapp',
+        'address',
         'role',
         'ecommerce_user_id',
     ];

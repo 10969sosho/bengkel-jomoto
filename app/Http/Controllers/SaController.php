@@ -43,19 +43,9 @@ class SaController extends Controller
         return view('sa.dashboard', compact('orders', 'stats', 'bookings', 'pricelistNames'));
     }
 
-    public function create(): View
+    public function create(): RedirectResponse
     {
-        $customers = User::where('role', 'customer')
-            ->with(['vehicles.serviceOrders' => fn ($query) => $query->whereNotNull('coupon_milestone')->where('status', '!=', 'cancelled')])
-            ->orderBy('name')->get();
-
-        $selectedBooking = request()->filled('booking_id')
-            ? ServiceOrder::where('status', 'draft')->whereNull('sa_id')->with(['customer', 'vehicle'])->findOrFail(request()->integer('booking_id'))
-            : null;
-        $selectedCustomerId = $selectedBooking?->customer_id ?? request()->integer('customer_id');
-        $technicians = User::where('role', 'teknisi')->orderBy('name')->get();
-
-        return view('sa.create', compact('customers', 'selectedCustomerId', 'selectedBooking', 'technicians'));
+        return redirect()->route('sa.checkin.create', request()->query());
     }
 
     public function store(Request $request): RedirectResponse
@@ -305,38 +295,58 @@ class SaController extends Controller
 
         $data = $request->validate([
             'sa_diagnosis' => ['nullable', 'string', 'max:2000'],
-            'items' => ['array', 'min:1'],
+            'estimate_discount' => ['nullable', 'numeric', 'min:0'],
+            'estimate_tax' => ['nullable', 'numeric', 'min:0'],
+            'items' => ['required', 'array', 'min:1'],
             'items.*.item_type' => ['required', 'in:service,sparepart,sub_material'],
             'items.*.item_name' => ['required', 'string', 'max:255'],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
             'items.*.unit_price' => ['required', 'integer', 'min:0'],
+            'items.*.discount' => ['nullable', 'numeric', 'min:0'],
             'items.*.is_free' => ['nullable', 'in:1,on,true'],
             'items.*.free_reason' => ['nullable', 'string', 'max:255'],
         ]);
+
+        $serviceOrder->items()->delete();
+
+        $totalGross = 0;
+        $totalItemDiscount = 0;
+
+        foreach ($data['items'] as $item) {
+            $isFree = ! empty($item['is_free']);
+            $qty = (int) $item['quantity'];
+            $unitPrice = (int) $item['unit_price'];
+            $discount = isset($item['discount']) ? max(0, (float) $item['discount']) : 0;
+            $gross = $qty * $unitPrice;
+            $subtotal = $isFree ? 0 : max(0, $gross - $discount);
+
+            $totalGross += $isFree ? 0 : $gross;
+            $totalItemDiscount += $isFree ? 0 : $discount;
+
+            $serviceOrder->items()->create([
+                'item_type' => $item['item_type'],
+                'item_name' => $item['item_name'],
+                'quantity' => $qty,
+                'unit_price' => $unitPrice,
+                'discount' => $discount,
+                'subtotal' => $subtotal,
+                'is_free' => $isFree,
+                'free_reason' => $isFree ? ($item['free_reason'] ?? 'Tanpa biaya') : null,
+            ]);
+        }
+
+        $globalDiscount = isset($data['estimate_discount']) ? max(0, (float) $data['estimate_discount']) : 0;
+        $allDiscount = $totalItemDiscount + $globalDiscount;
+        $afterDiscount = max(0, $totalGross - $allDiscount + (int) $serviceOrder->visit_fee);
+        $tax = round($afterDiscount * 0.11);
 
         $serviceOrder->update([
             'sa_id' => auth()->id(),
             'sa_diagnosis' => $data['sa_diagnosis'] ?? $serviceOrder->sa_diagnosis,
             'estimate_number' => $serviceOrder->estimate_number ?? ServiceOrder::generateEstimateNumber(),
-            'estimate_discount' => $data['estimate_discount'] ?? ($serviceOrder->estimate_discount ?? 0),
-            'estimate_tax' => $data['estimate_tax'] ?? ($serviceOrder->estimate_tax ?? 0),
+            'estimate_discount' => $allDiscount,
+            'estimate_tax' => $tax,
         ]);
-
-        $serviceOrder->items()->delete();
-
-        foreach ($data['items'] as $item) {
-            $isFree = ! empty($item['is_free']);
-
-            $serviceOrder->items()->create([
-                'item_type' => $item['item_type'],
-                'item_name' => $item['item_name'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $item['unit_price'],
-                'subtotal' => $isFree ? 0 : $item['quantity'] * $item['unit_price'],
-                'is_free' => $isFree,
-                'free_reason' => $isFree ? ($item['free_reason'] ?? 'Tanpa biaya') : null,
-            ]);
-        }
 
         if (in_array($serviceOrder->status, ['draft', 'inspected', 'waiting_approval'], true)) {
             $serviceOrder->update(['status' => 'waiting_approval']);
@@ -351,12 +361,15 @@ class SaController extends Controller
             return back()->with('error', 'Hanya WO berstatus menunggu persetujuan yang bisa disetujui.');
         }
 
+        $spkNumber = $serviceOrder->spk_number ?? ServiceOrder::generateSpkNumber();
         $serviceOrder->update([
             'status' => 'approved',
             'estimate_approved_at' => now(),
+            'spk_number' => $spkNumber,
+            'spk_issued_at' => now(),
         ]);
 
-        return back()->with('success', 'Estimasi disetujui. WO siap dikerjakan teknisi.');
+        return back()->with('success', "Estimasi disetujui customer. Surat Perintah Kerja (SPK) No: {$spkNumber} otomatis diterbitkan & teknisi dapat mulai mengerjakan.");
     }
 
     public function finalCheck(Request $request, ServiceOrder $serviceOrder): RedirectResponse
@@ -454,14 +467,28 @@ class SaController extends Controller
         $data = $request->validate([
             'booking_id' => ['nullable', 'integer', Rule::exists('service_orders', 'id')],
             'customer_id' => ['required', Rule::exists('users', 'id')->where('role', 'customer')],
-            'vehicle_id' => ['required', Rule::exists('vehicles', 'id')->where('user_id', $request->integer('customer_id'))],
+            'customer_name' => ['nullable', 'string', 'max:255'],
+            'customer_address' => ['nullable', 'string', 'max:1000'],
+            'customer_phone' => ['nullable', 'string', 'max:50'],
+            'sa_name' => ['nullable', 'string', 'max:100'],
             'technician_id' => ['required', Rule::exists('users', 'id')->where('role', 'teknisi')],
+            'manager_name' => ['nullable', 'string', 'max:100'],
+            'vehicle_id' => ['required', Rule::exists('vehicles', 'id')->where('user_id', $request->integer('customer_id'))],
+            'vehicle_brand' => ['nullable', 'string', 'max:100'],
+            'vehicle_model' => ['nullable', 'string', 'max:100'],
+            'vehicle_serial_number' => ['nullable', 'string', 'max:100'],
+            'vehicle_chassis_number' => ['nullable', 'string', 'max:100'],
+            'vehicle_year' => ['nullable', 'integer', 'min:1950', 'max:'.(now()->year + 1)],
+            'vehicle_transmission' => ['nullable', 'string', 'max:50'],
+            'vehicle_engine_type' => ['nullable', 'string', 'max:100'],
+            'visit_date' => ['nullable', 'date'],
+            'plate_number' => ['nullable', 'string', 'max:20'],
+            'complaint_category' => ['nullable', 'string', 'max:100'],
             'location_type' => ['required', 'in:onsite,offsite'],
             'offsite_address' => ['required_if:location_type,offsite', 'nullable', 'string', 'max:1000'],
             'location_notes' => ['nullable', 'string', 'max:255'],
             'odometer' => ['required', 'integer', 'min:0'],
             'fuel_level' => ['required', 'string', 'in:E,1/4,1/2,3/4,F'],
-            'manager_name' => ['nullable', 'string', 'max:100'],
             'customer_complaint' => ['required', 'string', 'max:2000'],
             'sa_diagnosis' => ['nullable', 'string', 'max:2000'],
             'documents' => ['nullable', 'array'],
@@ -469,10 +496,35 @@ class SaController extends Controller
             'exterior' => ['nullable', 'array'],
             'odometer_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'fuel_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'exterior_photos' => ['nullable', 'array'],
+            'exterior_photos.*' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
+        $customer = User::findOrFail($data['customer_id']);
+        $customerUpdate = array_filter([
+            'name' => $data['customer_name'] ?? null,
+            'address' => $data['customer_address'] ?? null,
+            'phone' => $data['customer_phone'] ?? null,
+        ]);
+        if (! empty($customerUpdate)) {
+            $customer->update($customerUpdate);
+        }
+
         $vehicle = Vehicle::findOrFail($data['vehicle_id']);
-        $vehicle->update(['last_odometer' => $data['odometer']]);
+        $vehicleUpdate = array_filter([
+            'last_odometer' => $data['odometer'],
+            'brand' => $data['vehicle_brand'] ?? null,
+            'model' => $data['vehicle_model'] ?? null,
+            'serial_number' => $data['vehicle_serial_number'] ?? null,
+            'chassis_number' => $data['vehicle_chassis_number'] ?? null,
+            'year' => $data['vehicle_year'] ?? null,
+            'transmission' => $data['vehicle_transmission'] ?? null,
+            'engine_type' => $data['vehicle_engine_type'] ?? null,
+            'plate_number' => $data['plate_number'] ?? null,
+        ]);
+        if (! empty($vehicleUpdate)) {
+            $vehicle->update($vehicleUpdate);
+        }
 
         $booking = isset($data['booking_id'])
             ? ServiceOrder::findOrFail($data['booking_id'])
@@ -491,6 +543,8 @@ class SaController extends Controller
                 'offsite_address' => $offsite ? $data['offsite_address'] : null,
                 'location_notes' => $offsite ? ($data['location_notes'] ?? null) : null,
                 'visit_fee' => $offsite ? 50_000 : 0,
+                'visit_date' => $data['visit_date'] ?? now()->toDateString(),
+                'complaint_category' => $data['complaint_category'] ?? 'Servis & Perawatan',
                 'odometer' => $data['odometer'],
                 'service_type' => $coupon['service_type'] ?? ($offsite ? 'home_service' : 'regular'),
                 'coupon_milestone' => $coupon['milestone'] ?? null,
@@ -516,6 +570,15 @@ class SaController extends Controller
                 ? $request->file('fuel_photo')->store('inspections', 'public')
                 : ($serviceOrder->inspection?->fuel_photo ?? null);
 
+            $exteriorPhotosPaths = $serviceOrder->inspection?->exterior_photos ?? [];
+            if ($request->hasFile('exterior_photos')) {
+                foreach ($request->file('exterior_photos') as $photo) {
+                    if ($photo && $photo->isValid()) {
+                        $exteriorPhotosPaths[] = $photo->store('inspections/exterior', 'public');
+                    }
+                }
+            }
+
             $documentsChecklist = [];
             foreach (Inspection::DOCUMENTS_CHECKLIST as $docKey => $docLabel) {
                 $documentsChecklist[$docKey] = [
@@ -539,14 +602,16 @@ class SaController extends Controller
                 ['service_order_id' => $serviceOrder->id],
                 [
                     'inspection_number' => $serviceOrder->inspection?->inspection_number ?? Inspection::generateInspectionNumber(),
-                    'inspection_date' => now()->toDateString(),
+                    'inspection_date' => $data['visit_date'] ?? now()->toDateString(),
+                    'sa_name' => ! empty($data['sa_name']) ? $data['sa_name'] : (auth()->user()?->name ?? 'Sales Adviser'),
                     'technician_id' => $data['technician_id'],
-                    'manager_name' => $data['manager_name'] ?: 'ARTI DEWI',
+                    'manager_name' => ! empty($data['manager_name']) ? $data['manager_name'] : 'ARTI DEWI',
                     'fuel_level' => $data['fuel_level'],
                     'odometer_photo' => $odometerPhotoPath,
                     'fuel_photo' => $fuelPhotoPath,
                     'documents_checklist' => $documentsChecklist,
                     'exterior_checklist' => $exteriorChecklist,
+                    'exterior_photos' => $exteriorPhotosPaths,
                 ]
             );
 
@@ -601,5 +666,4 @@ class SaController extends Controller
 
         return view('sa.print-spk', compact('serviceOrder'));
     }
-
 }

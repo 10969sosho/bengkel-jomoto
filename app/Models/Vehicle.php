@@ -18,6 +18,9 @@ class Vehicle extends Model
         'chassis_number',
         'fuel_type',
         'last_odometer',
+        'transmission',
+        'engine_type',
+        'serial_number',
     ];
 
     protected function casts(): array
