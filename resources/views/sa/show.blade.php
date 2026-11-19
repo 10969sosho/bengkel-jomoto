@@ -244,7 +244,6 @@
                     </div>
                     <div class="flex flex-wrap gap-1.5">
                         <button type="button" onclick="addRow('service')" class="rounded-xl bg-lime-50 px-3 py-2 text-xs font-bold text-lime-700 transition hover:bg-lime-100 active:scale-95">+ Jasa</button>
-                        <button type="button" onclick="addRow('sparepart')" class="rounded-xl bg-sky-50 px-3 py-2 text-xs font-bold text-sky-700 transition hover:bg-sky-100 active:scale-95">+ Sparepart</button>
                         <button type="button" onclick="addRow('sub_material')" class="rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700 transition hover:bg-amber-100 active:scale-95">+ Sub-Material</button>
                     </div>
                 </div>
@@ -629,10 +628,36 @@
 {{-- Data untuk lembar estimasi --}}
 @if($serviceOrder->inspection && in_array($serviceOrder->status, ['draft', 'inspected', 'waiting_approval']))
 <script>
-    const pricelist = @json($pricelists->map(fn($p) => ['name' => $p->service_name, 'price' => (int) $p->price]));
-    const subMaterials = @json($subMaterials->map(fn($s) => ['name' => $s->name, 'price' => (int) $s->default_price]));
-    @php($existingItems = $serviceOrder->items->map(fn($i) => ['item_type' => $i->item_type, 'item_name' => $i->item_name, 'quantity' => $i->quantity, 'unit_price' => $i->unit_price, 'discount' => (int) ($i->discount ?? 0), 'is_free' => $i->is_free, 'free_reason' => $i->free_reason])->values())
-    const existingItems = @json($existingItems ?: $suggestedItems);
+<?php
+    $pricelistData = $pricelists->map(function ($p) {
+        return [
+            'name' => $p->service_name,
+            'price' => (int) $p->price,
+            'category' => $p->category,
+            'type' => $p->type ?? null,
+            'actionPrices' => $p->actionPrices(),
+        ];
+    });
+    $subMaterialsData = $subMaterials->map(function ($s) {
+        return ['name' => $s->name, 'price' => (int) $s->default_price];
+    });
+    $existingItemsData = $serviceOrder->items->map(function ($i) {
+        return [
+            'item_type' => $i->item_type,
+            'category' => $i->category,
+            'item_name' => $i->item_name,
+            'action' => $i->service_action,
+            'quantity' => $i->quantity,
+            'unit_price' => $i->unit_price,
+            'discount' => (int) ($i->discount ?? 0),
+            'is_free' => $i->is_free,
+            'free_reason' => $i->free_reason,
+        ];
+    })->values();
+?>
+    const pricelist = <?php echo json_encode($pricelistData); ?>;
+    const subMaterials = <?php echo json_encode($subMaterialsData); ?>;
+    const existingItems = <?php echo json_encode($existingItemsData->isNotEmpty() ? $existingItemsData : $suggestedItems); ?>;
     const visitFee = {{ (int) $serviceOrder->visit_fee }};
 
     const rupiah = n => 'Rp ' + Number(n).toLocaleString('id-ID');
@@ -641,7 +666,7 @@
 
     function optionsFor(type) {
         const source = type === 'service' ? pricelist : (type === 'sub_material' ? subMaterials : []);
-        return source.map(o => `<option value="${escapeHtml(o.name)}" data-price="${o.price}">${escapeHtml(o.name)} — ${rupiah(o.price)}</option>`).join('');
+        return source.map(o => `<option value="${escapeHtml(o.name)}" data-price="${o.price}" data-category="${escapeHtml(o.category)}" data-action-prices="${JSON.stringify(o.actionPrices || {})}">${escapeHtml(o.name)} — ${rupiah(o.price)}</option>`).join('');
     }
 
     function escapeHtml(value) {
@@ -668,12 +693,28 @@
                 ${customName
                     ? `<input required name="items[${idx}][item_name]" value="${escapeHtml(item.item_name)}" placeholder="Nama sparepart (HET)"
                         class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">`
+                    : type === 'service'
+                    ? `<div class="space-y-2">
+                            <select required name="items[${idx}][category]" onchange="updateServiceDetails(this)" class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
+                                <option value="">— Pilih Kategori —</option>
+                                ${[...new Set(pricelist.map(p => p.category))].map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('')}
+                            </select>
+                            <select required name="items[${idx}][item_name]" onchange="onNameChange(this)" class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
+                                <option value="">— Pilih Item Pekerjaan —</option>
+                                ${pricelist.filter(p => !item.category || p.category === item.category).map(p => `<option value="${escapeHtml(p.name)}" data-price="${p.price}" data-category="${escapeHtml(p.category)}" data-action-prices="${JSON.stringify(p.actionPrices || {})}">${escapeHtml(p.name)} — ${rupiah(p.price)}</option>`).join('')}
+                            </select>
+                            <select required name="items[${idx}][service_action]" onchange="onActionChange(this)" class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
+                                <option value="">— Pilih Jenis Layanan —</option>
+                                ${pricelist.find(p => p.name === item.item_name)?.actionPrices ? Object.entries(pricelist.find(p => p.name === item.item_name).actionPrices).map(([act, price]) => `<option value="${act}">${act} — ${rupiah(price)}</option>`).join('') : ''}
+                            </select>
+                        </div>`
                     : `<select required name="items[${idx}][item_name]" onchange="onNameChange(this)"
                         class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
                         ${optionsFor(type)}
                         ${type === 'service' && !pricelist.find(p => p.name === item.item_name) && item.item_name ? `<option selected value="${escapeHtml(item.item_name)}">${escapeHtml(item.item_name)}</option>` : ''}
                         ${type === 'sub_material' && item.item_name ? `<option selected value="${escapeHtml(item.item_name)}">${escapeHtml(item.item_name)}</option>` : ''}
-                       </select>`}
+                        ${type === 'sub_material' ? `<input type="hidden" name="items[${idx}][category]" value="Sub-Material"><input type="hidden" name="items[${idx}][service_action]" value="-">` : ''}
+                       </select>`}`}
                 <input type="hidden" name="items[${idx}][free_reason]" class="free-reason"
                         value="${escapeHtml(item.free_reason)}" placeholder="Alasan gratis">
             </td>
@@ -723,10 +764,96 @@
     function onNameChange(sel) {
         const opt = sel.selectedOptions[0];
         const price = opt?.dataset.price;
+        const actionPrices = opt?.dataset.actionPrices ? JSON.parse(opt.dataset.actionPrices) : {};
+        
         if (price !== undefined) {
             const row = sel.closest('tr');
-            row.querySelector('[name$="[unit_price]"]').value = price;
+            const actionSelect = row.querySelector('[name$="[service_action]"]');
+            
+            let finalPrice = parseInt(price);
+            
+            if (actionSelect && actionSelect.value) {
+                if (actionPrices[actionSelect.value] > 0) {
+                    finalPrice = actionPrices[actionSelect.value];
+                }
+            }
+            
+            row.querySelector('[name$="[unit_price]"]').value = finalPrice;
+            
+            const serviceActionSelect = row.querySelector('[name$="[service_action]"]');
+            if (serviceActionSelect) {
+                serviceActionSelect.innerHTML = '';
+                const actions = Object.keys(actionPrices);
+                if (actions.length > 0) {
+                    serviceActionSelect.innerHTML = '<option value="">— Pilih Jenis Layanan —</option>' + 
+                        actions.map(act => {
+                            const actPrice = actionPrices[act];
+                            return `<option value="${act}" data-price="${actPrice}">${act} — ${rupiah(actPrice)}</option>`;
+                        }).join('');
+                    const firstOption = serviceActionSelect.querySelector('option:not([value=""])');
+                    if (firstOption) {
+                        firstOption.selected = true;
+                        if (firstOption.dataset.price) {
+                            row.querySelector('[name$="[unit_price]"]').value = parseInt(firstOption.dataset.price);
+                        }
+                    }
+                } else {
+                    serviceActionSelect.innerHTML = '<option value="">— Pilih Jenis Layanan —</option>';
+                }
+            }
         }
+        recalc();
+    }
+
+    function onActionChange(actionSel) {
+        const row = actionSel.closest('tr');
+        const itemNameSel = row.querySelector('select[name$="[item_name]"]');
+        const opt = itemNameSel.selectedOptions[0];
+        const actionPrices = opt?.dataset.actionPrices ? JSON.parse(opt.dataset.actionPrices) : {};
+        const basePrice = opt?.dataset.price ? parseInt(opt.dataset.price) : 0;
+        
+        let finalPrice = basePrice;
+        
+        if (actionSel.value && actionPrices[actionSel.value] > 0) {
+            finalPrice = actionPrices[actionSel.value];
+        }
+        
+        row.querySelector('[name$="[unit_price]"]').value = finalPrice;
+        recalc();
+    }
+
+    function updateServiceDetails(categorySel) {
+        const row = categorySel.closest('tr');
+        const itemNameSel = row.querySelector('select[name$="[item_name]"]');
+        const serviceActionSel = row.querySelector('select[name$="[service_action]"]');
+        const unitPriceEl = row.querySelector('input[name$="[unit_price]"]');
+        const pricelistItems = pricelist.filter(p => p.category === categorySel.value);
+        
+        itemNameSel.innerHTML = '';
+        serviceActionSel.innerHTML = '';
+        while (itemNameSel.firstChild) itemNameSel.removeChild(itemNameSel.firstChild);
+        while (serviceActionSel.firstChild) serviceActionSel.removeChild(serviceActionSel.firstChild);
+        
+        if (pricelistItems.length > 0) {
+            itemNameSel.innerHTML = pricelistItems.map(p => `<option value="${escapeHtml(p.name)}" data-price="${p.price}" data-category="${escapeHtml(p.category)}" data-action-prices="${JSON.stringify(p.actionPrices)}">${escapeHtml(p.name)} — ${rupiah(p.price)}</option>`).join('');
+            
+            const actionPrices = pricelistItems[0].actionPrices || {};
+            if (Object.keys(actionPrices).length > 0) {
+                serviceActionSel.innerHTML = `
+                    <option value=\"\">— Pilih Jenis Layanan —</option>
+                    <option value=\"P\">Pemeriksaan — ${rupiah(actionPrices.P || actionPrices.p || 0)}</option>
+                    <option value=\"S\">Penyetelan/Pembersihan — ${rupiah(actionPrices.S || actionPrices.s || 0)}</option>
+                    <option value=\"G\">Penggantian/Perbaikan — ${rupiah(actionPrices.G || actionPrices.g || 0)}</option>
+                `;
+            } else {
+                serviceActionSel.innerHTML = '<option value=\"\">— Tidak ada jenis layanan —</option>';
+            }
+        } else {
+            itemNameSel.innerHTML = '<option value="">— Tidak ada item dalam kategori ini —</option>';
+            serviceActionSel.innerHTML = '<option value="">— Tidak ada jenis layanan —</option>';
+        }
+        
+        unitPriceEl.value = '';
         recalc();
     }
 
@@ -741,6 +868,8 @@
             tr.querySelector('[name$="[discount]"]').name = `items[${i}][discount]`;
             tr.querySelector('[name$="[is_free]"]').name = `items[${i}][is_free]`;
             tr.querySelector('.free-reason').name = `items[${i}][free_reason]`;
+            const catEl = tr.querySelector('[name*="[category]"]'); if (catEl) catEl.name = 'items[' + i + '][category]';
+            const actEl = tr.querySelector('[name*="[service_action]"]'); if (actEl) actEl.name = 'items[' + i + '][service_action]';
         });
         if (!body.children.length) document.getElementById('empty-hint').style.display = '';
     }
