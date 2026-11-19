@@ -666,7 +666,7 @@
 
     function optionsFor(type) {
         const source = type === 'service' ? pricelist : (type === 'sub_material' ? subMaterials : []);
-        return source.map(o => `<option value="${escapeHtml(o.name)}" data-price="${o.price}" data-category="${escapeHtml(o.category)}" data-action-prices="${JSON.stringify(o.actionPrices || {})}">${escapeHtml(o.name)} — ${rupiah(o.price)}</option>`).join('');
+        return source.map(o => `<option value="${escapeHtml(o.name)}" data-price="${o.price}" data-category="${escapeHtml(o.category)}" data-action-prices="${escapeHtml(JSON.stringify(o.actionPrices || {}))}">${escapeHtml(o.name)} — ${rupiah(o.price)}</option>`).join('');
     }
 
     function escapeHtml(value) {
@@ -701,7 +701,7 @@
                             </select>
                             <select required name="items[${idx}][item_name]" onchange="onNameChange(this)" class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
                                 <option value="">— Pilih Item Pekerjaan —</option>
-                                ${pricelist.filter(p => !item.category || p.category === item.category).map(p => `<option value="${escapeHtml(p.name)}" data-price="${p.price}" data-category="${escapeHtml(p.category)}" data-action-prices="${JSON.stringify(p.actionPrices || {})}">${escapeHtml(p.name)} — ${rupiah(p.price)}</option>`).join('')}
+                                ${pricelist.filter(p => !item.category || p.category === item.category).map(p => `<option value="${escapeHtml(p.name)}" data-price="${p.price}" data-category="${escapeHtml(p.category)}" data-action-prices="${escapeHtml(JSON.stringify(p.actionPrices || {}))}">${escapeHtml(p.name)} — ${rupiah(p.price)}</option>`).join('')}
                             </select>
                             <select required name="items[${idx}][service_action]" onchange="onActionChange(this)" class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
                                 <option value="">— Pilih Jenis Layanan —</option>
@@ -714,7 +714,7 @@
                         ${type === 'service' && !pricelist.find(p => p.name === item.item_name) && item.item_name ? `<option selected value="${escapeHtml(item.item_name)}">${escapeHtml(item.item_name)}</option>` : ''}
                         ${type === 'sub_material' && item.item_name ? `<option selected value="${escapeHtml(item.item_name)}">${escapeHtml(item.item_name)}</option>` : ''}
                         ${type === 'sub_material' ? `<input type="hidden" name="items[${idx}][category]" value="Sub-Material"><input type="hidden" name="items[${idx}][service_action]" value="-">` : ''}
-                       </select>`}`}
+                       </select>`}
                 <input type="hidden" name="items[${idx}][free_reason]" class="free-reason"
                         value="${escapeHtml(item.free_reason)}" placeholder="Alasan gratis">
             </td>
@@ -835,7 +835,7 @@
         while (serviceActionSel.firstChild) serviceActionSel.removeChild(serviceActionSel.firstChild);
         
         if (pricelistItems.length > 0) {
-            itemNameSel.innerHTML = pricelistItems.map(p => `<option value="${escapeHtml(p.name)}" data-price="${p.price}" data-category="${escapeHtml(p.category)}" data-action-prices="${JSON.stringify(p.actionPrices)}">${escapeHtml(p.name)} — ${rupiah(p.price)}</option>`).join('');
+            itemNameSel.innerHTML = pricelistItems.map(p => `<option value="${escapeHtml(p.name)}" data-price="${p.price}" data-category="${escapeHtml(p.category)}" data-action-prices="${escapeHtml(JSON.stringify(p.actionPrices))}">${escapeHtml(p.name)} — ${rupiah(p.price)}</option>`).join('');
             
             const actionPrices = pricelistItems[0].actionPrices || {};
             if (Object.keys(actionPrices).length > 0) {
