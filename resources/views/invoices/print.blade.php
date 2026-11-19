@@ -83,15 +83,22 @@
     <table class="mt-5 w-full text-sm">
         <thead>
             <tr class="border-b-2 border-slate-800 text-left text-xs font-bold uppercase tracking-wide text-slate-500">
-                <th class="py-2">Item</th>
-                <th class="py-2 text-center">Qty</th>
+                <th class="py-2">No</th>
+                <th class="py-2">Kategori</th>
+                <th class="py-2">Pekerjaan</th>
+                <th class="py-2">Jenis Layanan</th>
                 <th class="py-2 text-right">Harga</th>
-                <th class="py-2 text-right">Jumlah</th>
+                <th class="py-2 text-center">Qty</th>
+                <th class="py-2 text-right">Subtotal</th>
             </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
+            @php($idx = -1)
             @foreach($order->items as $item)
+                @php($idx++)
                 <tr>
+                    <td class="py-2.5">{{ $idx + 1 }}</td>
+                    <td class="py-2.5">{{ $item->categoryLabel() }}</td>
                     <td class="py-2.5">
                         <span class="mr-2 rounded px-1.5 py-0.5 text-[10px] font-bold uppercase
                             {{ $item->item_type === 'service' ? 'bg-indigo-100 text-indigo-700' : ($item->item_type === 'sparepart' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700') }}">
@@ -102,8 +109,9 @@
                             <div class="text-xs font-semibold text-emerald-600">GRATIS — {{ $item->free_reason }}</div>
                         @endif
                     </td>
-                    <td class="py-2.5 text-center">{{ $item->quantity }}</td>
+                    <td class="py-2.5 text-center">{{ $item->actionLabel() }}</td>
                     <td class="py-2.5 text-right">Rp {{ number_format($item->unit_price) }}</td>
+                    <td class="py-2.5 text-center">{{ $item->quantity }}</td>
                     <td class="py-2.5 text-right font-semibold">
                         {{ $item->is_free ? 'Rp 0' : 'Rp '.number_format($item->subtotal) }}
                     </td>
@@ -111,9 +119,12 @@
             @endforeach
             @if($order->visit_fee > 0)
                 <tr>
-                    <td class="py-2.5"><span class="mr-2 rounded bg-lime-100 px-1.5 py-0.5 text-[10px] font-bold uppercase text-lime-700">Home Service</span>Biaya kunjungan teknisi</td>
-                    <td class="py-2.5 text-center">1</td>
+                    <td class="py-2.5">{{ count($order->items) + 1 }}</td>
+                    <td class="py-2.5">Home Service</td>
+                    <td class="py-2.5">Biaya kunjungan teknisi</td>
+                    <td class="py-2.5 text-center">-</td>
                     <td class="py-2.5 text-right">Rp {{ number_format($order->visit_fee) }}</td>
+                    <td class="py-2.5 text-center">1</td>
                     <td class="py-2.5 text-right font-semibold">Rp {{ number_format($order->visit_fee) }}</td>
                 </tr>
             @endif

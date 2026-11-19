@@ -96,14 +96,15 @@
                         <th class="px-5 py-3.5">Nama Layanan Servis</th>
                         <th class="px-5 py-3.5">Kategori</th>
                         <th class="px-5 py-3.5">Harga Acuan Dasar</th>
-                        <th class="px-5 py-3.5">Rincian Aksi &amp; Biaya</th>
+                        <th class="px-5 py-3.5">Harga P (Periksa)</th>
+                        <th class="px-5 py-3.5">Harga S (Setel/Bersih)</th>
+                        <th class="px-5 py-3.5">Harga G (Ganti/Perbaiki)</th>
                         <th class="px-5 py-3.5 text-center">Status</th>
                         <th class="px-5 py-3.5 text-right">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-100">
                     @forelse($pricelists as $index => $item)
-                        @php($actions = $item->actionPrices())
                         <tr class="transition hover:bg-slate-50/70 {{ $item->is_active ? '' : 'opacity-60' }}">
                             <td class="px-5 py-3.5 text-xs text-slate-400 tabular-nums">{{ $index + 1 }}</td>
                             <td class="px-5 py-3.5 font-semibold text-slate-900">
@@ -114,22 +115,15 @@
                                     {{ $item->categoryLabel() }}
                                 </span>
                             </td>
-                            <td class="px-5 py-3.5 font-bold text-slate-800 tabular-nums">
-                                Rp {{ number_format($item->price) }}
+                            <td class="px-5 py-3.5 font-bold text-slate-800 tabular-nums">Rp {{ number_format($item->price) }}</td>
+                            <td class="px-5 py-3.5 tabular-nums">
+                                {{ $item->price_p > 0 ? 'Rp ' . number_format($item->price_p) : '-' }}
                             </td>
-                            <td class="px-5 py-3.5">
-                                @if($actions !== [])
-                                    <div class="flex flex-wrap gap-1.5">
-                                        @foreach($actions as $action => $price)
-                                            <span class="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-0.5 text-xs">
-                                                <span class="grid h-4 w-4 place-items-center rounded bg-slate-900 text-[9px] font-black text-lime-300">{{ $action }}</span>
-                                                <span class="font-bold text-slate-700">Rp {{ number_format($price) }}</span>
-                                            </span>
-                                        @endforeach
-                                    </div>
-                                @else
-                                    <span class="text-xs text-slate-400">—</span>
-                                @endif
+                            <td class="px-5 py-3.5 tabular-nums">
+                                {{ $item->price_s > 0 ? 'Rp ' . number_format($item->price_s) : '-' }}
+                            </td>
+                            <td class="px-5 py-3.5 tabular-nums">
+                                {{ $item->price_g > 0 ? 'Rp ' . number_format($item->price_g) : '-' }}
                             </td>
                             <td class="px-5 py-3.5 text-center">
                                 @if($item->is_active)
@@ -157,7 +151,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="px-5 py-12 text-center text-slate-400">
+                            <td colspan="8" class="px-5 py-12 text-center text-slate-400">
                                 Tidak ada layanan pricelist yang sesuai dengan filter.
                             </td>
                         </tr>

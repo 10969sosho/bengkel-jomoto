@@ -96,7 +96,7 @@
         </div>
     </div>
 
-    {{-- Tabel Rincian Transaksi / Biaya --}}
+     {{-- Tabel Rincian Transaksi / Biaya --}}
     <div class="mt-4 overflow-hidden rounded-xl border border-slate-200">
         <div class="bg-slate-100 px-3.5 py-2 text-[11px] font-black uppercase tracking-wider text-slate-700 border-b border-slate-200">
             Rincian Transaksi / Biaya Servis
@@ -105,10 +105,11 @@
             <thead>
                 <tr class="border-b border-slate-200 bg-slate-50 text-left font-bold text-slate-600">
                     <th class="py-2 px-3 text-center w-10">No</th>
-                    <th class="py-2 px-3">Nama Barang / Jasa</th>
-                    <th class="py-2 px-3 text-center w-16">Qty</th>
-                    <th class="py-2 px-3 text-right">Harga Satuan</th>
-                    <th class="py-2 px-3 text-right">Diskon</th>
+                    <th class="py-2 px-3">Kategori</th>
+                    <th class="py-2 px-3">Pekerjaan</th>
+                    <th class="py-2 px-3 text-center w-16">Jenis Layanan</th>
+                    <th class="py-2 px-3 text-right">Harga</th>
+                    <th class="py-2 px-3 text-center">Qty</th>
                     <th class="py-2 px-3 text-right">Subtotal</th>
                 </tr>
             </thead>
@@ -116,6 +117,7 @@
                 @forelse($items as $idx => $item)
                     <tr>
                         <td class="py-2 px-3 text-center font-mono text-slate-400">{{ $idx + 1 }}</td>
+                        <td class="py-2 px-3">{{ $item->categoryLabel() }}</td>
                         <td class="py-2 px-3">
                             <span class="mr-1.5 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase
                                 {{ $item->item_type === 'service' ? 'bg-indigo-100 text-indigo-700' : ($item->item_type === 'sparepart' ? 'bg-sky-100 text-sky-700' : 'bg-amber-100 text-amber-700') }}">
@@ -126,29 +128,30 @@
                                 <span class="ml-1 text-[10px] font-bold text-emerald-600">(GRATIS — {{ $item->free_reason }})</span>
                             @endif
                         </td>
-                        <td class="py-2 px-3 text-center font-semibold text-slate-700">{{ $item->quantity }}</td>
+                        <td class="py-2 px-3 text-center">{{ $item->actionLabel() }}</td>
                         <td class="py-2 px-3 text-right text-slate-700">Rp {{ number_format($item->unit_price) }}</td>
-                        <td class="py-2 px-3 text-right text-red-600">{{ $item->discount > 0 ? '-Rp '.number_format($item->discount) : 'Rp 0' }}</td>
+                        <td class="py-2 px-3 text-center font-semibold text-slate-700">{{ $item->quantity }}</td>
                         <td class="py-2 px-3 text-right font-bold text-slate-900">
                             {{ $item->is_free ? 'Rp 0' : 'Rp '.number_format($item->subtotal) }}
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="6" class="py-4 text-center text-slate-400">Belum ada item rincian transaksi/biaya.</td>
+                        <td colspan="7" class="py-4 text-center text-slate-400">Belum ada item rincian transaksi/biaya.</td>
                     </tr>
                 @endforelse
 
                 @if($serviceOrder->visit_fee > 0)
                     <tr>
                         <td class="py-2 px-3 text-center font-mono text-slate-400">{{ count($items) + 1 }}</td>
+                        <td class="py-2 px-3">Home Service</td>
                         <td class="py-2 px-3">
                             <span class="mr-1.5 rounded bg-lime-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-lime-800">Home Service</span>
                             <span class="font-semibold text-slate-800">Biaya Kunjungan Teknisi</span>
                         </td>
-                        <td class="py-2 px-3 text-center font-semibold text-slate-700">1</td>
+                        <td class="py-2 px-3 text-center">-</td>
                         <td class="py-2 px-3 text-right text-slate-700">Rp {{ number_format($serviceOrder->visit_fee) }}</td>
-                        <td class="py-2 px-3 text-right text-slate-400">Rp 0</td>
+                        <td class="py-2 px-3 text-center font-semibold text-slate-700">1</td>
                         <td class="py-2 px-3 text-right font-bold text-slate-900">Rp {{ number_format($serviceOrder->visit_fee) }}</td>
                     </tr>
                 @endif

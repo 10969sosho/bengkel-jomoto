@@ -127,14 +127,24 @@ class AdminController extends Controller
         $data = $request->validate([
             'service_name' => ['required', 'string', 'max:255'],
             'category' => ['required', 'string', 'max:50'],
-            'price' => ['required', 'integer', 'min:0'],
             'price_p' => ['nullable', 'integer', 'min:0'],
             'price_s' => ['nullable', 'integer', 'min:0'],
             'price_g' => ['nullable', 'integer', 'min:0'],
+            'price' => ['sometimes', 'required', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $data['is_active'] = $request->boolean('is_active', true);
+
+        $priceP = $data['price_p'] ?? 0;
+        $priceS = $data['price_s'] ?? 0;
+        $priceG = $data['price_g'] ?? 0;
+
+        $data['price_p'] = $priceP;
+        $data['price_s'] = $priceS;
+        $data['price_g'] = $priceG;
+
+        $data['price'] = $data['price'] ?: max($priceP, $priceS, $priceG, 0);
 
         ServicePricelist::create($data);
 
@@ -146,14 +156,24 @@ class AdminController extends Controller
         $data = $request->validate([
             'service_name' => ['required', 'string', 'max:255'],
             'category' => ['required', 'string', 'max:50'],
-            'price' => ['required', 'integer', 'min:0'],
             'price_p' => ['nullable', 'integer', 'min:0'],
             'price_s' => ['nullable', 'integer', 'min:0'],
             'price_g' => ['nullable', 'integer', 'min:0'],
+            'price' => ['sometimes', 'required', 'integer', 'min:0'],
             'is_active' => ['nullable', 'boolean'],
         ]);
 
         $data['is_active'] = $request->boolean('is_active');
+
+        $priceP = $data['price_p'] ?? 0;
+        $priceS = $data['price_s'] ?? 0;
+        $priceG = $data['price_g'] ?? 0;
+
+        $data['price_p'] = $priceP;
+        $data['price_s'] = $priceS;
+        $data['price_g'] = $priceG;
+
+        $data['price'] = $data['price'] ?: max($priceP, $priceS, $priceG, 0);
 
         $pricelist->update($data);
 

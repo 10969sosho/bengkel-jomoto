@@ -158,21 +158,19 @@
         <thead>
             <tr>
                 <th style="width: 35px;" class="text-center">No</th>
-                <th style="width: 100px;">Jenis</th>
+                <th style="width: 100px;">Kategori</th>
                 <th>Deskripsi Pekerjaan / Sparepart / Sub Material</th>
                 <th style="width: 50px;" class="text-center">Qty</th>
-                <th style="width: 150px;">Keterangan</th>
+                <th style="width: 150px;">Jenis Layanan</th>
+                <th style="width: 50px;" class="text-center">Harga</th>
+                <th style="width: 100px;">Subtotal</th>
             </tr>
         </thead>
         <tbody>
             @forelse($serviceOrder->items as $idx => $item)
                 <tr>
                     <td class="text-center">{{ $idx + 1 }}</td>
-                    <td>
-                        <span class="badge {{ $item->item_type === 'service' ? 'badge-service' : ($item->item_type === 'sparepart' ? 'badge-sparepart' : 'badge-sub') }}">
-                            {{ $item->typeLabel() }}
-                        </span>
-                    </td>
+                    <td>{{ $item->categoryLabel() }}</td>
                     <td>
                         <b>{{ $item->item_name }}</b>
                         @if($item->is_free)
@@ -180,13 +178,15 @@
                         @endif
                     </td>
                     <td class="text-center font-bold">{{ $item->quantity }}</td>
-                    <td style="font-size: 10px; color: #64748b;">
-                        {{ $item->is_free ? 'Disetujui gratis' : 'Sesuai persetujuan estimasi' }}
+                    <td style="font-size: 10px; color: #64748b;">{{ $item->actionLabel() }}</td>
+                    <td class="text-right">Rp {{ number_format($item->unit_price) }}</td>
+                    <td class="text-right font-semibold {{ $item->is_free ? 'text-emerald-600' : '' }}">
+                        {{ $item->is_free ? 'Rp 0' : 'Rp '.number_format($item->subtotal) }}
                     </td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5" class="text-center" style="color: #94a3b8; padding: 12px;">Belum ada rincian pekerjaan yang terdaftar.</td>
+                    <td colspan="7" class="text-center" style="color: #94a3b8; padding: 12px;">Belum ada rincian pekerjaan yang terdaftar.</td>
                 </tr>
             @endforelse
         </tbody>

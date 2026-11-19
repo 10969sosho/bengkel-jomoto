@@ -11,6 +11,7 @@ use App\Models\SubMaterialCatalog;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\WorkLog;
+use Database\Seeders\ServicePricelistSeeder;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 
@@ -94,43 +95,8 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // ── Master: Pricelist Servis ──
-        $pricelist = [
-            ['Servis Berkala Ringan', 'reguler', 85000],
-            ['Servis Berkala Lengkap', 'reguler', 150000],
-            ['Tune Up', 'reguler', 175000],
-            ['Ganti Oli Mesin + Filter', 'reguler', 65000],
-            ['Servis CVT / Roller', 'reguler', 120000],
-            ['Pengecekan & Perbaikan Kelistrikan', 'reguler', 100000],
-            ['Klaim Service Berkala 1.000 KM (ATPM)', 'free_atpm', 85000],
-            ['Klaim Service Berkala 4.000 KM (ATPM)', 'free_atpm', 150000],
-            ['Klaim Service Berkala 7.000 KM (ATPM)', 'free_atpm', 175000],
-            ['Service Berkala 10.000 KM (Jomoto)', 'free_jomoto', 150000],
-            ['Service Berkala 20.000 KM (Jomoto)', 'free_jomoto', 175000],
-            ['Biaya Kunjungan Home Service', 'home_service', 50000],
-            ['Jasa Teknisi Home Service', 'home_service', 75000],
-        ];
-
-        foreach ($pricelist as [$name, $category, $price]) {
-            ServicePricelist::create([
-                'service_name' => $name,
-                'category' => $category,
-                'price' => $price,
-                'is_active' => true,
-            ]);
-        }
-
-        // ── Master: 68 Item Pricelist Layanan (8 kategori, harga per aksi P/S/G, '-' = 0) ──
-        foreach ($this->serviceCatalog() as [$category, $name, $priceP, $priceS, $priceG]) {
-            ServicePricelist::create([
-                'service_name' => $name,
-                'category' => $category,
-                'price' => $priceP ?: ($priceS ?: $priceG),
-                'price_p' => $priceP,
-                'price_s' => $priceS,
-                'price_g' => $priceG,
-                'is_active' => true,
-            ]);
-        }
+        // ── Master: Pricelist Jasa Servis (36 item) ──
+        (new ServicePricelistSeeder)->run();
 
         // ── Master: Katalog Sub-Material ──
         $subMaterials = [

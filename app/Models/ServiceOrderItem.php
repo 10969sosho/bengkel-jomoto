@@ -17,6 +17,8 @@ class ServiceOrderItem extends Model
         'subtotal',
         'is_free',
         'free_reason',
+        'category',
+        'service_action',
     ];
 
     protected function casts(): array
@@ -28,6 +30,32 @@ class ServiceOrderItem extends Model
             'subtotal' => 'integer',
             'is_free' => 'boolean',
         ];
+    }
+
+    public function categoryLabel(): string
+    {
+        if (! empty($this->category)) {
+            return $this->category;
+        }
+        if ($this->item_type === 'sparepart') {
+            return 'Sparepart';
+        }
+        if ($this->item_type === 'sub_material') {
+            return 'Sub-Material';
+        }
+        $pricelist = \App\Models\ServicePricelist::where('service_name', $this->item_name)->first();
+        return $pricelist ? $pricelist->categoryLabel() : 'Mesin';
+    }
+
+    public function actionLabel(): string
+    {
+        if (! empty($this->service_action)) {
+            return strtoupper($this->service_action);
+        }
+        if ($this->item_type === 'service') {
+            return 'G';
+        }
+        return '-';
     }
 
     public function serviceOrder(): BelongsTo

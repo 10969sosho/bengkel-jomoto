@@ -305,6 +305,8 @@ class SaController extends Controller
             'items.*.discount' => ['nullable', 'numeric', 'min:0'],
             'items.*.is_free' => ['nullable', 'in:1,on,true'],
             'items.*.free_reason' => ['nullable', 'string', 'max:255'],
+            'items.*.category' => ['nullable', 'string', 'max:255'],
+            'items.*.service_action' => ['nullable', 'string', 'max:10'],
         ]);
 
         $serviceOrder->items()->delete();
@@ -332,6 +334,8 @@ class SaController extends Controller
                 'subtotal' => $subtotal,
                 'is_free' => $isFree,
                 'free_reason' => $isFree ? ($item['free_reason'] ?? 'Tanpa biaya') : null,
+                'category' => $item['category'] ?? null,
+                'service_action' => $item['service_action'] ?? null,
             ]);
         }
 

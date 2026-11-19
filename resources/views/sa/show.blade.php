@@ -441,30 +441,29 @@
                         <table class="w-full text-sm">
                             <thead class="border-b border-slate-200 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
                                 <tr>
-                                    <th class="pb-2">Jenis</th>
-                                    <th class="pb-2">Item</th>
-                                    <th class="pb-2 text-center">Qty</th>
+                                    <th class="pb-2">No</th>
+                                    <th class="pb-2">Kategori</th>
+                                    <th class="pb-2">Pekerjaan</th>
+                                    <th class="pb-2 text-center">Jenis Layanan</th>
                                     <th class="pb-2 text-right">Harga</th>
+                                    <th class="pb-2 text-center">Qty</th>
                                     <th class="pb-2 text-right">Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100">
                                 @foreach($serviceOrder->items as $item)
                                     <tr>
-                                        <td class="py-2.5">
-                                            <span class="rounded-md px-2 py-0.5 text-xs font-semibold
-                                                {{ $item->item_type === 'service' ? 'bg-lime-50 text-lime-700' : ($item->item_type === 'sparepart' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700') }}">
-                                                {{ $item->typeLabel() }}
-                                            </span>
-                                        </td>
+                                        <td class="py-2.5">{{ $loop->iteration }}</td>
+                                        <td class="py-2.5">{{ $item->categoryLabel() }}</td>
                                         <td class="py-2.5">
                                             {{ $item->item_name }}
                                             @if($item->is_free)
                                                 <div class="text-xs text-emerald-600">GRATIS — {{ $item->free_reason }}</div>
                                             @endif
                                         </td>
-                                        <td class="py-2.5 text-center">{{ $item->quantity }}</td>
+                                        <td class="py-2.5 text-center">{{ $item->actionLabel() }}</td>
                                         <td class="py-2.5 text-right">Rp {{ number_format($item->unit_price) }}</td>
+                                        <td class="py-2.5 text-center">{{ $item->quantity }}</td>
                                         <td class="py-2.5 text-right font-semibold {{ $item->is_free ? 'text-emerald-600' : '' }}">
                                             {{ $item->is_free ? 'Rp 0' : 'Rp '.number_format($item->subtotal) }}
                                         </td>
