@@ -254,6 +254,52 @@
                         Estimasi baru bisa dibuat setelah teknisi mengisi lembar pemeriksaan.
                     </div>
                 @else
+                {{-- Data Terhubung dari Pemeriksaan Awal --}}
+                <div class="mb-4 rounded-2xl border border-slate-200/90 bg-slate-50/80 p-4 text-xs">
+                    <div class="mb-2.5 flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="grid h-6 w-6 place-items-center rounded-lg bg-lime-300 text-slate-900 font-bold">
+                                <i data-lucide="link-2" class="h-3.5 w-3.5"></i>
+                            </span>
+                            <span class="text-[11px] font-black uppercase tracking-wider text-slate-800">Data Terhubung dari Pemeriksaan Awal</span>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            <span class="rounded-md border border-slate-200 bg-white px-2 py-0.5 font-mono text-[11px] font-bold text-slate-600">
+                                Ref: {{ $serviceOrder->inspection?->inspection_number ?? '—' }}
+                            </span>
+                            @if($serviceOrder->estimate_number)
+                                <span class="rounded-md bg-lime-100 px-2 py-0.5 font-mono text-[11px] font-bold text-lime-800">
+                                    No: {{ $serviceOrder->estimate_number }}
+                                </span>
+                            @endif
+                            <a href="{{ route('sa.print.estimate', $serviceOrder) }}" target="_blank" rel="noopener"
+                               class="inline-flex items-center gap-1 rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-bold text-lime-300 transition hover:bg-slate-800">
+                                <i data-lucide="printer" class="h-3 w-3"></i> Cetak Lembar Estimasi
+                            </a>
+                        </div>
+                    </div>
+                    <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="space-y-1">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Data Pelanggan</div>
+                            <div class="font-bold text-slate-800">{{ $serviceOrder->customer?->name }}</div>
+                            <div class="text-slate-500">{{ $serviceOrder->customer?->phone ?: ($serviceOrder->customer?->whatsapp ?: '—') }}</div>
+                            <div class="truncate text-slate-500">{{ $serviceOrder->customer?->address ?: ($serviceOrder->offsite_address ?: '—') }}</div>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Petugas Bengkel</div>
+                            <div>SA: <b class="text-slate-800">{{ $serviceOrder->inspection?->sa_name ?: ($serviceOrder->sa?->name ?? 'Sales Adviser') }}</b></div>
+                            <div>Mekanik: <b class="text-sky-700">{{ $serviceOrder->technician?->name ?? '—' }}</b></div>
+                            <div>Manager: <b class="text-slate-800">{{ $serviceOrder->inspection?->manager_name ?? 'ARTI DEWI' }}</b></div>
+                        </div>
+                        <div class="space-y-1 sm:col-span-2 lg:col-span-1">
+                            <div class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Data Kendaraan &amp; Keluhan</div>
+                            <div><b class="font-mono text-slate-900">{{ $serviceOrder->vehicle?->plate_number }}</b> · {{ $serviceOrder->vehicle?->brand }} {{ $serviceOrder->vehicle?->model }}</div>
+                            <div class="text-slate-500">Odometer: <b class="text-slate-800">{{ number_format($serviceOrder->odometer ?: ($serviceOrder->vehicle?->last_odometer ?? 0)) }} KM</b></div>
+                            <div class="text-[11px] text-slate-600"><b>Keluhan:</b> <span class="rounded bg-amber-100 px-1 py-0.2 font-bold text-amber-900">{{ $serviceOrder->complaint_category ?: 'Servis' }}</span> {{ Str::limit($serviceOrder->customer_complaint, 50) }}</div>
+                        </div>
+                    </div>
+                </div>
+
                 <form method="POST" action="{{ route('sa.estimate', $serviceOrder) }}" id="estimate-form">
                     @csrf
                     <div class="mb-4">
@@ -267,13 +313,15 @@
                         <table class="w-full text-sm" id="items-table">
                             <thead class="border-b border-slate-200 text-left text-[11px] font-bold uppercase tracking-wide text-slate-400">
                                 <tr>
+                                    <th class="pb-2 pr-2 text-center w-8">No</th>
                                     <th class="pb-2 pr-2">Jenis</th>
-                                    <th class="pb-2 pr-2">Nama Item</th>
-                                    <th class="pb-2 pr-2 text-center">Qty</th>
-                                    <th class="pb-2 pr-2 text-right">Harga</th>
+                                    <th class="pb-2 pr-2">Nama Barang / Jasa</th>
+                                    <th class="pb-2 pr-2 text-center w-16">Qty</th>
+                                    <th class="pb-2 pr-2 text-right w-28">Harga Satuan</th>
+                                    <th class="pb-2 pr-2 text-right w-24">Diskon</th>
                                     <th class="whitespace-nowrap pb-2 pr-2 text-center">Gratis</th>
-                                    <th class="whitespace-nowrap pb-2 text-right">Subtotal</th>
-                                    <th></th>
+                                    <th class="whitespace-nowrap pb-2 text-right w-28">Subtotal</th>
+                                    <th class="w-8"></th>
                                 </tr>
                             </thead>
                             <tbody id="items-body" class="divide-y divide-slate-100"></tbody>
@@ -281,18 +329,88 @@
                     </div>
 
                     <div class="mt-4 flex flex-wrap items-start justify-between gap-4">
-                        <div class="text-xs text-slate-400" id="empty-hint">Belum ada item — tambahkan minimal 1 jasa/sparepart/sub-material.</div>
-                        <div class="min-w-[260px] rounded-2xl border border-slate-100 bg-slate-50 p-4 text-sm">
-                            <div class="flex justify-between py-0.5"><span class="text-slate-500">Total Jasa &amp; Kunjungan</span><span id="sum-service" class="font-semibold">Rp 0</span></div>
-                            <div class="flex justify-between py-0.5"><span class="text-slate-500">Total Sparepart</span><span id="sum-sparepart" class="font-semibold">Rp 0</span></div>
-                            <div class="flex justify-between py-0.5"><span class="text-slate-500">Total Sub-Material</span><span id="sum-sub_material" class="font-semibold">Rp 0</span></div>
-                            <div class="mt-1 flex justify-between border-t border-slate-200 pt-1.5"><span class="font-semibold text-slate-700">Subtotal</span><span id="sum-total" class="font-bold text-slate-900">Rp 0</span></div>
-                            <div class="flex justify-between text-xs text-slate-400"><span>Pajak 11% (dihitung saat invoice)</span><span id="sum-tax">Rp 0</span></div>
-                            <div class="mt-1 flex justify-between rounded-xl bg-slate-900 px-3 py-2 text-base"><span class="font-bold text-white">Estimasi + Pajak</span><span id="sum-grand" class="font-mono font-bold text-lime-300">Rp 0</span></div>
+                        <div class="space-y-2">
+                            <div class="text-xs text-slate-400" id="empty-hint">Belum ada item — tambahkan minimal 1 jasa/sparepart/sub-material.</div>
+                            <div class="max-w-xs">
+                                <label class="block text-xs font-semibold text-slate-600">Diskon Tambahan Global (Opsional)</label>
+                                <div class="relative mt-1">
+                                    <span class="absolute left-3 top-2 text-xs font-bold text-slate-400">Rp</span>
+                                    <input type="number" name="estimate_discount" id="global-discount" min="0"
+                                           value="{{ old('estimate_discount', $serviceOrder->estimate_discount > 0 ? (int)$serviceOrder->estimate_discount : 0) }}"
+                                           oninput="recalc()"
+                                           class="w-full rounded-xl border-slate-200 bg-slate-50 py-1.5 pl-9 pr-3 text-sm outline-none focus:ring-2 focus:ring-lime-200">
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Summary Kalkulasi: Total Biaya, Total Diskon, Total Setelah Diskon, PPN, Total Keseluruhan --}}
+                        <div class="w-full max-w-sm rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs space-y-1.5">
+                            <div class="flex justify-between text-slate-600">
+                                <span>Total Biaya (Sebelum Diskon):</span>
+                                <span id="sum-total-biaya" class="font-bold text-slate-900">Rp 0</span>
+                            </div>
+                            <div class="flex justify-between text-red-600 font-medium">
+                                <span>Total Diskon:</span>
+                                <span id="sum-total-diskon">-Rp 0</span>
+                            </div>
+                            <div class="flex justify-between text-slate-700 font-semibold border-t border-slate-200 pt-1">
+                                <span>Total Setelah Diskon:</span>
+                                <span id="sum-setelah-diskon" class="font-bold text-slate-900">Rp 0</span>
+                            </div>
+                            <div class="flex justify-between text-slate-500">
+                                <span>PPN (11%):</span>
+                                <span id="sum-ppn" class="font-medium text-slate-800">Rp 0</span>
+                            </div>
+                            <div class="mt-1 flex justify-between rounded-xl bg-slate-900 px-3.5 py-2.5 text-sm font-black text-white">
+                                <span class="uppercase tracking-wide">Total Keseluruhan:</span>
+                                <span id="sum-keseluruhan" class="font-mono text-lime-300">Rp 0</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                    {{-- Kolom Tanda Tangan (TTD) 3 Kolom --}}
+                    <div class="mt-5 border-t border-slate-200 pt-4">
+                        <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2.5 text-center">
+                            Persetujuan Estimasi Biaya Pekerjaan (3 Kolom TTD)
+                        </div>
+                        <div class="grid grid-cols-3 gap-3 text-center text-xs">
+                            <div class="rounded-xl border border-dashed border-slate-300 p-2.5 bg-white">
+                                <div class="font-bold text-slate-700">Pelanggan</div>
+                                <div class="h-12 flex items-center justify-center text-[11px] text-slate-400">
+                                    @if($serviceOrder->estimate_approved_at)
+                                        <span class="font-semibold text-emerald-700">✓ Disetujui</span>
+                                    @else
+                                        (Persetujuan Estimasi)
+                                    @endif
+                                </div>
+                                <div class="border-t border-slate-300 pt-1 font-bold text-slate-800 truncate">{{ $serviceOrder->customer?->name }}</div>
+                            </div>
+                            <div class="rounded-xl border border-dashed border-slate-300 p-2.5 bg-white">
+                                <div class="font-bold text-slate-700">Service Advisor (SA)</div>
+                                <div class="h-12 flex items-center justify-center text-[11px] text-slate-400">
+                                    <span class="font-semibold text-indigo-700">✓ SA Estimator</span>
+                                </div>
+                                <div class="border-t border-slate-300 pt-1 font-bold text-slate-800 truncate">{{ $serviceOrder->inspection?->sa_name ?: ($serviceOrder->sa?->name ?? 'Sales Adviser') }}</div>
+                            </div>
+                            <div class="rounded-xl border border-dashed border-slate-300 p-2.5 bg-white">
+                                <div class="font-bold text-slate-700">Mekanik</div>
+                                <div class="h-12 flex items-center justify-center text-[11px] text-slate-400">
+                                    @if($serviceOrder->inspection?->mechanic_confirmed_at)
+                                        <span class="font-semibold text-sky-700">✓ Konfirmasi Hasil</span>
+                                    @else
+                                        (Persetujuan Pengerjaan)
+                                    @endif
+                                </div>
+                                <div class="border-t border-slate-300 pt-1 font-bold text-slate-800 truncate">{{ $serviceOrder->technician?->name ?? 'Mekanik Bengkel' }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                        <a href="{{ route('sa.print.estimate', $serviceOrder) }}" target="_blank" rel="noopener"
+                           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50 transition">
+                            <i data-lucide="printer" class="h-4 w-4"></i> Cetak / Preview PDF
+                        </a>
                         <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-lime-300 px-5 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-lime-400 active:scale-[.98]">
                             <i data-lucide="send" class="h-4 w-4"></i> Simpan Estimasi &amp; Minta Persetujuan
                         </button>
@@ -514,7 +632,7 @@
 <script>
     const pricelist = @json($pricelists->map(fn($p) => ['name' => $p->service_name, 'price' => (int) $p->price]));
     const subMaterials = @json($subMaterials->map(fn($s) => ['name' => $s->name, 'price' => (int) $s->default_price]));
-    @php($existingItems = $serviceOrder->items->map(fn($i) => ['item_type' => $i->item_type, 'item_name' => $i->item_name, 'quantity' => $i->quantity, 'unit_price' => $i->unit_price, 'is_free' => $i->is_free, 'free_reason' => $i->free_reason])->values())
+    @php($existingItems = $serviceOrder->items->map(fn($i) => ['item_type' => $i->item_type, 'item_name' => $i->item_name, 'quantity' => $i->quantity, 'unit_price' => $i->unit_price, 'discount' => (int) ($i->discount ?? 0), 'is_free' => $i->is_free, 'free_reason' => $i->free_reason])->values())
     const existingItems = @json($existingItems ?: $suggestedItems);
     const visitFee = {{ (int) $serviceOrder->visit_fee }};
 
@@ -540,8 +658,9 @@
         const presetPrice = item.unit_price ?? (type === 'service' ? (pricelist[0]?.price ?? 0) : (subMaterials[0]?.price ?? 0));
 
         tr.innerHTML = `
+            <td class="py-2 pr-2 align-top text-center font-mono text-xs text-slate-400 row-no">${idx + 1}</td>
             <td class="py-2 pr-2 align-top">
-                <span class="rounded-md px-2 py-0.5 text-xs font-semibold ${type === 'service' ? 'bg-lime-50 text-lime-700' : (type === 'sparepart' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700')}">
+                <span class="rounded-md px-2 py-0.5 text-xs font-semibold ${type === 'service' ? 'bg-indigo-50 text-indigo-700' : (type === 'sparepart' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700')}">
                     ${type === 'service' ? 'Jasa' : (type === 'sparepart' ? 'Sparepart' : 'Sub-Material')}
                 </span>
                 <input type="hidden" name="items[${idx}][item_type]" value="${type}">
@@ -565,13 +684,17 @@
             </td>
             <td class="py-2 pr-2 align-top text-right">
                 <input type="number" name="items[${idx}][unit_price]" min="0" value="${item.unit_price ?? presetPrice}" oninput="recalc()"
-                    class="w-28 rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-right text-sm outline-none focus:ring-2 focus:ring-lime-200">
+                    class="w-24 rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-right text-sm outline-none focus:ring-2 focus:ring-lime-200">
+            </td>
+            <td class="py-2 pr-2 align-top text-right">
+                <input type="number" name="items[${idx}][discount]" min="0" value="${item.discount ?? 0}" oninput="recalc()" placeholder="0"
+                    class="w-20 rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-right text-sm outline-none focus:ring-2 focus:ring-lime-200">
             </td>
             <td class="py-2 pr-2 align-top text-center">
                 <input type="checkbox" name="items[${idx}][is_free]" value="1" ${item.is_free ? 'checked' : ''} onchange="recalc()"
                     class="h-4 w-4 rounded border-slate-300 text-lime-500 focus:ring-lime-400">
             </td>
-            <td class="whitespace-nowrap py-2 align-top text-right font-semibold row-subtotal">Rp 0</td>
+            <td class="whitespace-nowrap py-2 align-top text-right font-bold text-slate-900 row-subtotal">Rp 0</td>
             <td class="py-2 align-top text-right">
                 <button type="button" onclick="this.closest('tr').remove(); reindex(); recalc()"
                     class="text-xs font-bold text-red-400 transition hover:text-red-600">✕</button>
@@ -610,10 +733,13 @@
 
     function reindex() {
         [...body.children].forEach((tr, i) => {
+            const noEl = tr.querySelector('.row-no');
+            if (noEl) noEl.textContent = i + 1;
             tr.querySelector('[name$="[item_type]"]').name = `items[${i}][item_type]`;
             tr.querySelector('[name$="[item_name]"]').name = `items[${i}][item_name]`;
             tr.querySelector('[name$="[quantity]"]').name = `items[${i}][quantity]`;
             tr.querySelector('[name$="[unit_price]"]').name = `items[${i}][unit_price]`;
+            tr.querySelector('[name$="[discount]"]').name = `items[${i}][discount]`;
             tr.querySelector('[name$="[is_free]"]').name = `items[${i}][is_free]`;
             tr.querySelector('.free-reason').name = `items[${i}][free_reason]`;
         });
@@ -621,30 +747,55 @@
     }
 
     function recalc() {
-        const sums = { service: 0, sparepart: 0, sub_material: 0 };
+        let totalBiaya = visitFee;
+        let totalItemDiscount = 0;
 
-        [...body.children].forEach(tr => {
-            const free = tr.querySelector('[name$="[is_free]"]').checked;
-            const qty = Number(tr.querySelector('[name$="[quantity]"]').value || 0);
-            const price = Number(tr.querySelector('[name$="[unit_price]"]').value || 0);
-            const subtotal = free ? 0 : qty * price;
+        [...body.children].forEach((tr, i) => {
+            const noEl = tr.querySelector('.row-no');
+            if (noEl) noEl.textContent = i + 1;
+
+            const free = tr.querySelector('[name$="[is_free]"]')?.checked;
+            const qty = Number(tr.querySelector('[name$="[quantity]"]')?.value || 0);
+            const price = Number(tr.querySelector('[name$="[unit_price]"]')?.value || 0);
+            const disc = Math.max(0, Number(tr.querySelector('[name$="[discount]"]')?.value || 0));
+
+            const gross = qty * price;
+            const subtotal = free ? 0 : Math.max(0, gross - disc);
             tr.querySelector('.row-subtotal').textContent = rupiah(subtotal);
-            sums[tr.dataset.type] += subtotal;
+
+            totalBiaya += free ? 0 : gross;
+            totalItemDiscount += free ? 0 : disc;
 
             const reasonInput = tr.querySelector('.free-reason');
-            if (free) { reasonInput.type = 'text'; if (!reasonInput.value) reasonInput.value = 'Tanpa biaya'; }
-            else { reasonInput.value = ''; }
+            if (reasonInput) {
+                if (free) {
+                    reasonInput.type = 'text';
+                    if (!reasonInput.value) reasonInput.value = 'Tanpa biaya';
+                } else {
+                    reasonInput.value = '';
+                }
+            }
         });
 
-        const total = sums.service + sums.sparepart + sums.sub_material + visitFee;
-        const tax = Math.round(total * 0.11);
+        const globalDiscountInput = document.getElementById('global-discount');
+        const globalDiscount = globalDiscountInput ? Math.max(0, Number(globalDiscountInput.value || 0)) : 0;
+        const totalDiskon = totalItemDiscount + globalDiscount;
 
-        document.getElementById('sum-service').textContent = rupiah(sums.service + visitFee);
-        document.getElementById('sum-sparepart').textContent = rupiah(sums.sparepart);
-        document.getElementById('sum-sub_material').textContent = rupiah(sums.sub_material);
-        document.getElementById('sum-total').textContent = rupiah(total);
-        document.getElementById('sum-tax').textContent = rupiah(tax);
-        document.getElementById('sum-grand').textContent = rupiah(total + tax);
+        const totalSetelahDiskon = Math.max(0, totalBiaya - totalDiskon);
+        const ppn = Math.round(totalSetelahDiskon * 0.11);
+        const totalKeseluruhan = totalSetelahDiskon + ppn;
+
+        const elTotalBiaya = document.getElementById('sum-total-biaya');
+        const elTotalDiskon = document.getElementById('sum-total-diskon');
+        const elSetelahDiskon = document.getElementById('sum-setelah-diskon');
+        const elPpn = document.getElementById('sum-ppn');
+        const elKeseluruhan = document.getElementById('sum-keseluruhan');
+
+        if (elTotalBiaya) elTotalBiaya.textContent = rupiah(totalBiaya);
+        if (elTotalDiskon) elTotalDiskon.textContent = '- ' + rupiah(totalDiskon);
+        if (elSetelahDiskon) elSetelahDiskon.textContent = rupiah(totalSetelahDiskon);
+        if (elPpn) elPpn.textContent = rupiah(ppn);
+        if (elKeseluruhan) elKeseluruhan.textContent = rupiah(totalKeseluruhan);
     }
 
     existingItems.forEach(item => addRow(item.item_type, item));

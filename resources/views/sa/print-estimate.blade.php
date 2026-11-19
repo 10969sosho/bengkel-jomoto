@@ -21,7 +21,7 @@
 @php
     $items = $serviceOrder->items;
     $totalBiaya = (int) $items->sum(fn($it) => $it->quantity * $it->unit_price) + (int) $serviceOrder->visit_fee;
-    $totalDiskon = (int) $items->sum('discount') + (int) ($serviceOrder->estimate_discount ?? 0);
+    $totalDiskon = max((int) ($serviceOrder->estimate_discount ?? 0), (int) $items->sum('discount'));
     $totalSetelahDiskon = max(0, $totalBiaya - $totalDiskon);
     $ppn = (int) round($totalSetelahDiskon * 0.11);
     $totalKeseluruhan = $totalSetelahDiskon + $ppn;
