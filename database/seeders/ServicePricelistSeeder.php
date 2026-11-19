@@ -67,6 +67,8 @@ class ServicePricelistSeeder extends Seeder
             ['sprocket', 'Pelindung Rantai', 0, 0, 0],
         ];
 
+        ServicePricelist::truncate();
+
         foreach ($pricelist as [$category, $name, $price_p, $price_s, $price_g]) {
             ServicePricelist::create([
                 'service_name' => $name,
