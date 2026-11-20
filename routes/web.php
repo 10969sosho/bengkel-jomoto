@@ -15,6 +15,12 @@ Route::middleware('guest')->group(function () {
 });
 Route::post('/logout', [AuthController::class, 'destroy'])->middleware('auth')->name('logout');
 
+Route::get('/ping', fn () => response()->json([
+    'status' => 'ok',
+    'app' => 'Bengkel Jomoto',
+    'timestamp' => now()->toISOString(),
+]));
+
 Route::get('/', fn () => redirect()->route('dashboard'));
 Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
