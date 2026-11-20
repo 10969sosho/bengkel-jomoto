@@ -314,7 +314,9 @@
                                 <tr>
                                     <th class="pb-2 pr-2 text-center w-8">No</th>
                                     <th class="pb-2 pr-2">Jenis</th>
-                                    <th class="pb-2 pr-2">Nama Barang / Jasa</th>
+                                    <th class="pb-2 pr-2 w-40">Kategori</th>
+                                    <th class="pb-2 pr-2 min-w-48">Nama Barang / Jasa</th>
+                                    <th class="pb-2 pr-2 w-36">Layanan (P/S/G)</th>
                                     <th class="pb-2 pr-2 text-center w-16">Qty</th>
                                     <th class="pb-2 pr-2 text-right w-28">Harga Satuan</th>
                                     <th class="pb-2 pr-2 text-right w-24">Diskon</th>
@@ -627,6 +629,32 @@
 
 {{-- Data untuk lembar estimasi --}}
 @if($serviceOrder->inspection && in_array($serviceOrder->status, ['draft', 'inspected', 'waiting_approval']))
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
+<style>
+    .est-ts { width: 100%; }
+    .est-ts .ts-control {
+        min-height: 2.15rem; padding: .35rem .6rem; border: 1px solid #e2e8f0; border-radius: .6rem;
+        background: #f8fafc; font-size: .875rem; color: #0f172a; box-shadow: none;
+    }
+    .est-ts.focus .ts-control { border-color: #a3e635; box-shadow: 0 0 0 2px #ecfccb; }
+    .est-ts .ts-placeholder { color: #94a3b8; }
+    .ts-dropdown {
+        border: 1px solid #e2e8f0; border-radius: .6rem; background: #fff; font-size: .875rem;
+        box-shadow: 0 12px 24px -10px rgb(15 23 42 / .35); margin-top: 2px;
+    }
+    .ts-dropdown .ts-dropdown-content { max-height: 14rem; }
+    .ts-dropdown .option { padding: .4rem .65rem; color: #334155; }
+    .ts-dropdown .active, .ts-dropdown .active.create { background: #d9f99d; color: #0f172a; }
+    .ts-dropdown .selected { font-weight: 700; color: #0f172a; }
+    #items-table select.est-plain {
+        width: 100%; cursor: pointer; border-radius: .5rem; border: 1px solid #e2e8f0;
+        background: #f8fafc; padding: .4rem .5rem; font-size: .875rem; color: #0f172a;
+        outline: none; transition: box-shadow .15s, border-color .15s;
+    }
+    #items-table select.est-plain:focus { border-color: #a3e635; box-shadow: 0 0 0 2px #ecfccb; }
+    #items-table select.est-plain:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 <?php
     $pricelistData = $pricelists->map(function ($p) {
@@ -634,6 +662,7 @@
             'name' => $p->service_name,
             'price' => (int) $p->price,
             'category' => $p->category,
+            'categoryLabel' => $p->categoryLabel(),
             'type' => $p->type ?? null,
             'actionPrices' => $p->actionPrices(),
         ];
@@ -664,9 +693,107 @@
     const body = document.getElementById('items-body');
     if (!body) throw new Error('no estimate form');
 
-    function optionsFor(type) {
-        const source = type === 'service' ? pricelist : (type === 'sub_material' ? subMaterials : []);
-        return source.map(o => `<option value="${escapeHtml(o.name)}" data-price="${o.price}" data-category="${escapeHtml(o.category)}" data-action-prices="${escapeHtml(JSON.stringify(o.actionPrices || {}))}">${escapeHtml(o.name)} — ${rupiah(o.price)}</option>`).join('');
+    const categoryLabels = Object.fromEntries(pricelist.map(p => [p.category, p.categoryLabel || p.category]));
+    const catLabel = cat => categoryLabels[cat] || cat || '';
+
+    // Harga P/S/G yang kosong / nol / strip tidak ditawarkan sebagai opsi layanan.
+    function actionEntries(item) {
+        return Object.entries(item?.actionPrices || {}).filter(([, price]) => Number(price) > 0);
+    }
+
+    const psgNames = { P: 'Pemeriksaan', S: 'Penyetelan/Pembersihan', G: 'Penggantian/Perbaikan' };
+    const psgOption = (action, price, selected = false) =>
+        `<option value="${action}" data-price="${price}"${selected ? ' selected' : ''}>${action} — ${psgNames[action] || action} (${rupiah(price)})</option>`;
+
+    function initTs(el) {
+        if (typeof TomSelect === 'undefined' || el.tomselect) return;
+        new TomSelect(el, {
+            allowEmptyOption: true,
+            maxOptions: 150,
+            dropdownParent: 'body',
+            placeholder: el.dataset.ph || 'Pilih...',
+        });
+    }
+
+    function setSelectHtml(el, html) {
+        if (el.tomselect) el.tomselect.destroy();
+        el.innerHTML = html;
+        initTs(el);
+    }
+
+    function initRowTs(tr) {
+        tr.querySelectorAll('select[data-ts]').forEach(initTs);
+    }
+
+    function serviceCells(idx, item) {
+        const cats = [...new Set(pricelist.map(p => p.category))];
+        const known = pricelist.find(p => p.name === item.item_name) || null;
+        const cat = item.category || known?.category || '';
+        const orphan = !!item.item_name && !known;
+
+        const nameOptions = pricelist
+                .filter(p => !cat || p.category === cat)
+                .map(p => `<option value="${escapeHtml(p.name)}"${p.name === item.item_name ? ' selected' : ''}>${escapeHtml(p.name)} — ${rupiah(p.price)}</option>`)
+                .join('')
+            + (orphan ? `<option value="${escapeHtml(item.item_name)}" selected>${escapeHtml(item.item_name)}</option>` : '');
+
+        const actions = actionEntries(known);
+        let layanan;
+        if (!item.item_name) {
+            layanan = `<select name="items[${idx}][service_action]" data-role="action" onchange="onActionChange(this)" disabled class="est-plain"><option value="">—</option></select>`;
+        } else {
+            const selected = actions.length ? (actions.some(([a]) => a === item.action) ? item.action : actions[0][0]) : (item.action || '-');
+            const opts = actions.length
+                ? actions.map(([a, v]) => psgOption(a, v, a === selected)).join('')
+                : `<option value="${escapeHtml(selected)}" selected>${escapeHtml(selected)}</option>`;
+            layanan = `<select name="items[${idx}][service_action]" data-role="action" onchange="onActionChange(this)" class="est-plain">${opts}</select>`;
+        }
+
+        return `
+            <td class="py-2 pr-2 align-top">
+                <select name="items[${idx}][category]" data-ts data-ph="Pilih kategori"${orphan && !cat ? '' : ' required'} onchange="updateServiceDetails(this)" class="est-ts">
+                    <option value="">— Pilih Kategori —</option>
+                    ${cats.map(c => `<option value="${escapeHtml(c)}"${c === cat ? ' selected' : ''}>${escapeHtml(catLabel(c))}</option>`).join('')}
+                </select>
+            </td>
+            <td class="py-2 pr-2 align-top">
+                <select name="items[${idx}][item_name]" data-ts data-role="name" data-ph="Cari nama jasa" required onchange="onServiceNameChange(this)" class="est-ts">
+                    <option value="">— Pilih Nama Jasa —</option>
+                    ${nameOptions}
+                </select>
+                <input type="hidden" name="items[${idx}][free_reason]" class="free-reason" value="${escapeHtml(item.free_reason)}">
+            </td>
+            ${layanan}`;
+    }
+
+    function subMaterialCells(idx, item) {
+        const master = subMaterials.find(s => s.name === item.item_name) || null;
+        const options = subMaterials
+                .map(s => `<option value="${escapeHtml(s.name)}"${s.name === item.item_name ? ' selected' : ''}>${escapeHtml(s.name)} — ${rupiah(s.price)}</option>`)
+                .join('')
+            + (item.item_name && !master ? `<option value="${escapeHtml(item.item_name)}" selected>${escapeHtml(item.item_name)}</option>` : '');
+
+        return `
+            <td class="py-2 pr-2 align-top text-center text-slate-400">-<input type="hidden" name="items[${idx}][category]" value="Sub-Material"></td>
+            <td class="py-2 pr-2 align-top">
+                <select name="items[${idx}][item_name]" data-ts data-role="name" data-ph="Cari sub-material" required onchange="onSubMaterialChange(this)" class="est-ts">
+                    <option value="">— Cari Sub-Material —</option>
+                    ${options}
+                </select>
+                <input type="hidden" name="items[${idx}][free_reason]" class="free-reason" value="${escapeHtml(item.free_reason)}">
+            </td>
+            <td class="py-2 pr-2 align-top text-center text-slate-400">-<input type="hidden" name="items[${idx}][service_action]" value="-"></td>`;
+    }
+
+    function sparepartCells(idx, item) {
+        return `
+            <td class="py-2 pr-2 align-top text-center text-slate-400">-</td>
+            <td class="py-2 pr-2 align-top">
+                <input required name="items[${idx}][item_name]" value="${escapeHtml(item.item_name)}" placeholder="Nama sparepart (HET)"
+                    class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
+                <input type="hidden" name="items[${idx}][free_reason]" class="free-reason" value="${escapeHtml(item.free_reason)}">
+            </td>
+            <td class="py-2 pr-2 align-top text-center text-slate-400">-</td>`;
     }
 
     function escapeHtml(value) {
@@ -674,56 +801,34 @@
     }
 
     function addRow(type, item = {}) {
+        if (type === 'sub_material' && !item.item_name) item = {...item, item_name: subMaterials[0]?.name};
+
         const idx = body.children.length;
         const tr = document.createElement('tr');
         tr.dataset.type = type;
 
-        const customName = type === 'sparepart';
-        const presetPrice = item.unit_price ?? (type === 'service' ? (pricelist[0]?.price ?? 0) : (subMaterials[0]?.price ?? 0));
+        const label = type === 'service' ? 'Jasa' : (type === 'sparepart' ? 'Sparepart' : 'Sub-Material');
+        const labelClass = type === 'service' ? 'bg-indigo-50 text-indigo-700'
+            : (type === 'sparepart' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700');
+        const cells = type === 'service' ? serviceCells(idx, item)
+            : (type === 'sub_material' ? subMaterialCells(idx, item) : sparepartCells(idx, item));
+        const presetPrice = item.unit_price ?? (type === 'sub_material'
+            ? (subMaterials.find(s => s.name === item.item_name)?.price ?? 0)
+            : 0);
 
         tr.innerHTML = `
             <td class="py-2 pr-2 align-top text-center font-mono text-xs text-slate-400 row-no">${idx + 1}</td>
             <td class="py-2 pr-2 align-top">
-                <span class="rounded-md px-2 py-0.5 text-xs font-semibold ${type === 'service' ? 'bg-indigo-50 text-indigo-700' : (type === 'sparepart' ? 'bg-sky-50 text-sky-700' : 'bg-amber-50 text-amber-700')}">
-                    ${type === 'service' ? 'Jasa' : (type === 'sparepart' ? 'Sparepart' : 'Sub-Material')}
-                </span>
+                <span class="rounded-md px-2 py-0.5 text-xs font-semibold ${labelClass}">${label}</span>
                 <input type="hidden" name="items[${idx}][item_type]" value="${type}">
             </td>
-            <td class="py-2 pr-2 align-top">
-                ${customName
-                    ? `<input required name="items[${idx}][item_name]" value="${escapeHtml(item.item_name)}" placeholder="Nama sparepart (HET)"
-                        class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">`
-                    : type === 'service'
-                    ? `<div class="space-y-2">
-                            <select required name="items[${idx}][category]" onchange="updateServiceDetails(this)" class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
-                                <option value="">— Pilih Kategori —</option>
-                                ${[...new Set(pricelist.map(p => p.category))].map(cat => `<option value="${escapeHtml(cat)}">${escapeHtml(cat)}</option>`).join('')}
-                            </select>
-                            <select required name="items[${idx}][item_name]" onchange="onNameChange(this)" class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
-                                <option value="">— Pilih Item Pekerjaan —</option>
-                                ${pricelist.filter(p => !item.category || p.category === item.category).map(p => `<option value="${escapeHtml(p.name)}" data-price="${p.price}" data-category="${escapeHtml(p.category)}" data-action-prices="${escapeHtml(JSON.stringify(p.actionPrices || {}))}">${escapeHtml(p.name)} — ${rupiah(p.price)}</option>`).join('')}
-                            </select>
-                            <select required name="items[${idx}][service_action]" onchange="onActionChange(this)" class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
-                                <option value="">— Pilih Jenis Layanan —</option>
-                                ${pricelist.find(p => p.name === item.item_name)?.actionPrices ? Object.entries(pricelist.find(p => p.name === item.item_name).actionPrices).map(([act, price]) => `<option value="${act}">${act} — ${rupiah(price)}</option>`).join('') : ''}
-                            </select>
-                        </div>`
-                    : `<select required name="items[${idx}][item_name]" onchange="onNameChange(this)"
-                        class="w-full rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-lime-200">
-                        ${optionsFor(type)}
-                        ${type === 'service' && !pricelist.find(p => p.name === item.item_name) && item.item_name ? `<option selected value="${escapeHtml(item.item_name)}">${escapeHtml(item.item_name)}</option>` : ''}
-                        ${type === 'sub_material' && item.item_name ? `<option selected value="${escapeHtml(item.item_name)}">${escapeHtml(item.item_name)}</option>` : ''}
-                        ${type === 'sub_material' ? `<input type="hidden" name="items[${idx}][category]" value="Sub-Material"><input type="hidden" name="items[${idx}][service_action]" value="-">` : ''}
-                       </select>`}
-                <input type="hidden" name="items[${idx}][free_reason]" class="free-reason"
-                        value="${escapeHtml(item.free_reason)}" placeholder="Alasan gratis">
-            </td>
+            ${cells}
             <td class="py-2 pr-2 align-top">
                 <input type="number" name="items[${idx}][quantity]" min="1" value="${item.quantity ?? 1}" oninput="recalc()"
                     class="w-16 rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-center text-sm outline-none focus:ring-2 focus:ring-lime-200">
             </td>
             <td class="py-2 pr-2 align-top text-right">
-                <input type="number" name="items[${idx}][unit_price]" min="0" value="${item.unit_price ?? presetPrice}" oninput="recalc()"
+                <input type="number" name="items[${idx}][unit_price]" min="0" value="${presetPrice}" oninput="recalc()"
                     class="w-24 rounded-lg border-slate-200 bg-slate-50 px-2 py-1.5 text-right text-sm outline-none focus:ring-2 focus:ring-lime-200">
             </td>
             <td class="py-2 pr-2 align-top text-right">
@@ -736,20 +841,12 @@
             </td>
             <td class="whitespace-nowrap py-2 align-top text-right font-bold text-slate-900 row-subtotal">Rp 0</td>
             <td class="py-2 align-top text-right">
-                <button type="button" onclick="this.closest('tr').remove(); reindex(); recalc()"
+                <button type="button" onclick="removeRow(this)"
                     class="text-xs font-bold text-red-400 transition hover:text-red-600">✕</button>
             </td>`;
 
         body.appendChild(tr);
-
-        if (type === 'service' && item.item_name && !pricelist.find(p => p.name === item.item_name)) {
-            const sel = tr.querySelector('select');
-            const opt = document.createElement('option');
-            opt.value = item.item_name;
-            opt.textContent = item.item_name;
-            opt.selected = true;
-            sel.appendChild(opt);
-        }
+        initRowTs(tr);
 
         if (item.is_free) {
             const reason = tr.querySelector('.free-reason');
@@ -761,99 +858,71 @@
         recalc();
     }
 
-    function onNameChange(sel) {
-        const opt = sel.selectedOptions[0];
-        const price = opt?.dataset.price;
-        const actionPrices = opt?.dataset.actionPrices ? JSON.parse(opt.dataset.actionPrices) : {};
-        
-        if (price !== undefined) {
-            const row = sel.closest('tr');
-            const actionSelect = row.querySelector('[name$="[service_action]"]');
-            
-            let finalPrice = parseInt(price);
-            
-            if (actionSelect && actionSelect.value) {
-                if (actionPrices[actionSelect.value] > 0) {
-                    finalPrice = actionPrices[actionSelect.value];
-                }
-            }
-            
-            row.querySelector('[name$="[unit_price]"]').value = finalPrice;
-            
-            const serviceActionSelect = row.querySelector('[name$="[service_action]"]');
-            if (serviceActionSelect) {
-                serviceActionSelect.innerHTML = '';
-                const actions = Object.keys(actionPrices);
-                if (actions.length > 0) {
-                    serviceActionSelect.innerHTML = '<option value="">— Pilih Jenis Layanan —</option>' + 
-                        actions.map(act => {
-                            const actPrice = actionPrices[act];
-                            return `<option value="${act}" data-price="${actPrice}">${act} — ${rupiah(actPrice)}</option>`;
-                        }).join('');
-                    const firstOption = serviceActionSelect.querySelector('option:not([value=""])');
-                    if (firstOption) {
-                        firstOption.selected = true;
-                        if (firstOption.dataset.price) {
-                            row.querySelector('[name$="[unit_price]"]').value = parseInt(firstOption.dataset.price);
-                        }
-                    }
-                } else {
-                    serviceActionSelect.innerHTML = '<option value="">— Pilih Jenis Layanan —</option>';
-                }
+    function removeRow(btn) {
+        const tr = btn.closest('tr');
+        tr.querySelectorAll('select').forEach(sel => sel.tomselect && sel.tomselect.destroy());
+        tr.remove();
+        reindex();
+        recalc();
+    }
+
+    function onServiceNameChange(sel) {
+        const row = sel.closest('tr');
+        const actionSel = row.querySelector('select[name$="[service_action]"]');
+        const priceEl = row.querySelector('input[name$="[unit_price]"]');
+        const service = pricelist.find(p => p.name === sel.value) || null;
+        const actions = service ? actionEntries(service) : [];
+
+        if (actionSel) {
+            if (!actions.length) {
+                actionSel.disabled = true;
+                actionSel.innerHTML = service
+                    ? '<option value="">— Tidak ada jenis layanan —</option>'
+                    : '<option value="">—</option>';
+                if (priceEl && service) priceEl.value = service.price;
+            } else {
+                actionSel.disabled = false;
+                actionSel.innerHTML = actions.map(([a, v]) => psgOption(a, v)).join('');
+                if (priceEl) priceEl.value = actions[0][1];
             }
         }
         recalc();
     }
 
+    function onSubMaterialChange(sel) {
+        const row = sel.closest('tr');
+        const priceEl = row.querySelector('input[name$="[unit_price]"]');
+        const master = subMaterials.find(s => s.name === sel.value);
+        if (priceEl && master) priceEl.value = master.price;
+        recalc();
+    }
+
     function onActionChange(actionSel) {
         const row = actionSel.closest('tr');
-        const itemNameSel = row.querySelector('select[name$="[item_name]"]');
-        const opt = itemNameSel.selectedOptions[0];
-        const actionPrices = opt?.dataset.actionPrices ? JSON.parse(opt.dataset.actionPrices) : {};
-        const basePrice = opt?.dataset.price ? parseInt(opt.dataset.price) : 0;
-        
-        let finalPrice = basePrice;
-        
-        if (actionSel.value && actionPrices[actionSel.value] > 0) {
-            finalPrice = actionPrices[actionSel.value];
-        }
-        
-        row.querySelector('[name$="[unit_price]"]').value = finalPrice;
+        const priceEl = row.querySelector('input[name$="[unit_price]"]');
+        const price = actionSel.selectedOptions[0]?.dataset.price;
+        if (priceEl && price !== undefined) priceEl.value = Number(price);
         recalc();
     }
 
     function updateServiceDetails(categorySel) {
         const row = categorySel.closest('tr');
         const itemNameSel = row.querySelector('select[name$="[item_name]"]');
-        const serviceActionSel = row.querySelector('select[name$="[service_action]"]');
-        const unitPriceEl = row.querySelector('input[name$="[unit_price]"]');
-        const pricelistItems = pricelist.filter(p => p.category === categorySel.value);
-        
-        itemNameSel.innerHTML = '';
-        serviceActionSel.innerHTML = '';
-        while (itemNameSel.firstChild) itemNameSel.removeChild(itemNameSel.firstChild);
-        while (serviceActionSel.firstChild) serviceActionSel.removeChild(serviceActionSel.firstChild);
-        
-        if (pricelistItems.length > 0) {
-            itemNameSel.innerHTML = pricelistItems.map(p => `<option value="${escapeHtml(p.name)}" data-price="${p.price}" data-category="${escapeHtml(p.category)}" data-action-prices="${escapeHtml(JSON.stringify(p.actionPrices))}">${escapeHtml(p.name)} — ${rupiah(p.price)}</option>`).join('');
-            
-            const actionPrices = pricelistItems[0].actionPrices || {};
-            if (Object.keys(actionPrices).length > 0) {
-                serviceActionSel.innerHTML = `
-                    <option value=\"\">— Pilih Jenis Layanan —</option>
-                    <option value=\"P\">Pemeriksaan — ${rupiah(actionPrices.P || actionPrices.p || 0)}</option>
-                    <option value=\"S\">Penyetelan/Pembersihan — ${rupiah(actionPrices.S || actionPrices.s || 0)}</option>
-                    <option value=\"G\">Penggantian/Perbaikan — ${rupiah(actionPrices.G || actionPrices.g || 0)}</option>
-                `;
-            } else {
-                serviceActionSel.innerHTML = '<option value=\"\">— Tidak ada jenis layanan —</option>';
-            }
-        } else {
-            itemNameSel.innerHTML = '<option value="">— Tidak ada item dalam kategori ini —</option>';
-            serviceActionSel.innerHTML = '<option value="">— Tidak ada jenis layanan —</option>';
+        const actionSel = row.querySelector('select[name$="[service_action]"]');
+        const priceEl = row.querySelector('input[name$="[unit_price]"]');
+        const cat = categorySel.value;
+        const items = cat ? pricelist.filter(p => p.category === cat) : pricelist;
+
+        setSelectHtml(itemNameSel,
+            '<option value="">— Pilih Nama Jasa —</option>' +
+            items.map(p => `<option value="${escapeHtml(p.name)}">${escapeHtml(p.name)} — ${rupiah(p.price)}</option>`).join('')
+        );
+
+        if (actionSel) {
+            actionSel.disabled = true;
+            actionSel.innerHTML = '<option value="">—</option>';
         }
-        
-        unitPriceEl.value = '';
+        if (priceEl) priceEl.value = 0;
         recalc();
     }
 
