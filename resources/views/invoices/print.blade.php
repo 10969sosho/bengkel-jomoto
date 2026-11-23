@@ -46,7 +46,7 @@
         <div class="text-right">
             <div class="text-xs font-bold uppercase tracking-widest text-slate-400">Invoice / Kwitansi</div>
             <div class="text-xl font-black text-slate-900">{{ $invoice->invoice_number }}</div>
-            <div class="mt-1 text-xs text-slate-500">Tanggal: {{ $invoice->created_at->format('d F Y') }}</div>
+            <div class="mt-1 text-xs text-slate-500">Tanggal: {{ $invoice->created_at->format('d/m/Y') }}</div>
         </div>
     </div>
 
@@ -163,7 +163,7 @@
                     {{ $invoice->isPaid() ? 'LUNAS' : 'Menunggu Pembayaran' }}
                 </div>
                 <div class="text-xs text-slate-500">
-                    {{ $invoice->isPaid() ? 'Dibayar pada '.$invoice->paid_at->format('d F Y H:i') : 'Metode: QRIS / Cash / Transfer via SA' }}
+                    {{ $invoice->isPaid() ? 'Dibayar pada '.$invoice->paid_at->format('d/m/Y H:i') : 'Metode: QRIS / Cash / Transfer via SA' }}
                 </div>
                 @if($invoice->isPaid() && ($invoice->payment_reference || $invoice->bank_account))
                     <div class="mt-1 text-xs text-slate-500">{{ $invoice->bank_account }}{{ $invoice->payment_reference ? ' · Ref '.$invoice->payment_reference : '' }}</div>

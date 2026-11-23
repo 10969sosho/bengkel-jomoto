@@ -9,6 +9,7 @@ use App\Models\ServicePricelist;
 use App\Models\SubMaterialCatalog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\JomotoCustomerSyncService;
 use App\Services\WhatsAppService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -213,6 +214,17 @@ class SaController extends Controller
         ]);
 
         return redirect()->route('sa.customers.show', $customer)->with('success', 'Customer baru berhasil ditambahkan.');
+    }
+
+    public function syncJomotoCustomers(): RedirectResponse
+    {
+        try {
+            $result = app(JomotoCustomerSyncService::class)->sync();
+        } catch (\Throwable $exception) {
+            return back()->with('error', 'Sinkronisasi customer Jomoto gagal: '.$exception->getMessage());
+        }
+
+        return back()->with('success', "Sinkronisasi customer jomotocenter.com selesai — {$result['created']} baru, {$result['updated']} diperbarui, {$result['skipped']} dilewati.");
     }
 
     public function showCustomer(User $customer): View
@@ -426,12 +438,17 @@ class SaController extends Controller
             return back()->with('error', 'Invoice hanya bisa diterbitkan setelah customer mengonfirmasi hasil pengerjaan.');
         }
 
-        $invoice = Invoice::createFromOrder($serviceOrder);
+        // Diskon global estimasi (estimate_discount memuat diskon item + global;
+        // diskon item sudah masuk ke subtotal, jadi invoice hanya membawa sisanya).
+        $itemDiscounts = (float) $serviceOrder->items()->where('is_free', false)->sum('discount');
+        $globalDiscount = max(0, (float) ($serviceOrder->estimate_discount ?? 0) - $itemDiscounts);
+
+        $invoice = Invoice::createFromOrder($serviceOrder, $globalDiscount);
         $serviceOrder->update(['status' => 'invoiced']);
 
         app(WhatsAppService::class)->notify(
             $serviceOrder,
-            "Invoice {$invoice->invoice_number} sebesar Rp ".number_format($invoice->total_amount).' telah terbit. Silakan lakukan pembayaran di kasir.'
+            "Invoice {$invoice->invoice_number} sebesar Rp ".number_format($invoice->grand_total).' telah terbit. Silakan lakukan pembayaran di kasir.'
         );
 
         return redirect()->route('invoices.print', $invoice)

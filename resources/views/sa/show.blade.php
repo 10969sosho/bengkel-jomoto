@@ -14,7 +14,7 @@
         <h1 class="font-mono text-xl font-extrabold text-slate-900">{{ $serviceOrder->wo_number }}</h1>
         <p class="mt-0.5 text-sm text-slate-500">
             {{ $serviceOrder->serviceTypeLabel() }} · {{ $serviceOrder->location_type === 'onsite' ? 'Di Bengkel' : 'Panggilan' }} ·
-            Dibuat {{ $serviceOrder->created_at->format('d M Y H:i') }}
+            Dibuat {{ $serviceOrder->created_at->format('d/m/Y H:i') }}
         </p>
     </div>
     <div class="flex flex-wrap items-center gap-2">
@@ -135,7 +135,7 @@
             <div class="mt-3 text-sm text-slate-500">
                 Teknisi aktif: <b class="text-slate-800">{{ $serviceOrder->technician?->name ?? 'Belum ada' }}</b>
                 @if($serviceOrder->estimated_completion)
-                    <br>Target selesai: <b>{{ $serviceOrder->estimated_completion->format('d M Y H:i') }}</b>
+                    <br>Target selesai: <b>{{ $serviceOrder->estimated_completion->format('d/m/Y H:i') }}</b>
                 @endif
             </div>
         </div>
@@ -157,7 +157,7 @@
                 <div class="mb-3">
                     @if($serviceOrder->inspection->mechanic_confirmed_at)
                         <span class="inline-flex items-center gap-1.5 rounded-lg bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800">
-                            <i data-lucide="check-circle" class="h-3.5 w-3.5"></i> Dikonfirmasi Mekanik {{ $serviceOrder->inspection->mechanic_confirmed_at->format('d M H:i') }}
+                            <i data-lucide="check-circle" class="h-3.5 w-3.5"></i> Dikonfirmasi Mekanik {{ $serviceOrder->inspection->mechanic_confirmed_at->format('d/m/Y H:i') }}
                         </span>
                     @else
                         <span class="inline-flex items-center gap-1.5 rounded-lg bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800">
@@ -207,7 +207,7 @@
             @foreach($serviceOrder->workLogs as $log)
                 <div class="border-b border-slate-50 py-1.5 last:border-0">
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-slate-500">{{ $log->started_at->format('d M H:i') }}</span>
+                        <span class="text-slate-500">{{ $log->started_at->format('d/m/Y H:i') }}</span>
                         <span class="font-semibold {{ $log->isOpen() ? 'text-indigo-600' : 'text-slate-700' }}">
                             @if($log->isOpen()) ● Berjalan @else {{ gmdate('H:i:s', $log->duration_seconds) }} @endif
                         </span>
@@ -229,7 +229,7 @@
 
     {{-- Kolom kanan: estimasi & invoice --}}
     <div class="space-y-5 lg:col-span-2">
-        @if(in_array($serviceOrder->status, ['draft', 'inspected', 'waiting_approval']))
+        @if(in_array($serviceOrder->status, ['draft', 'inspected', 'waiting_approval', 'completed']))
             {{-- Lembar Estimasi Biaya --}}
             <div class="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-sm">
                 <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
@@ -248,6 +248,25 @@
                     </div>
                 </div>
 
+                @if($serviceOrder->status === 'completed')
+                    <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div class="max-w-xl">
+                                <div class="font-bold text-emerald-900">Tahap 8 — Pemeriksaan Akhir: Sesuaikan Estimasi Biaya</div>
+                                <p class="mt-0.5 text-xs text-emerald-700">
+                                    Ubah item jasa/sparepart, qty, harga, atau diskon bila ada selisih hasil pemeriksaan.
+                                    Subtotal, diskon, PPN, dan total dihitung ulang otomatis, lalu invoice diterbitkan dari estimasi terbaru.
+                                </p>
+                            </div>
+                            <button type="button" id="toggle-estimate-editor" onclick="toggleEstimateEditor()"
+                                    class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700 active:scale-[.98]">
+                                <i data-lucide="pencil" class="h-4 w-4"></i> Sesuaikan / Edit Estimasi Biaya
+                            </button>
+                        </div>
+                    </div>
+                @endif
+
+                <div id="estimate-editor" @if($serviceOrder->status === 'completed') class="hidden" @endif>
                 @if(! $serviceOrder->inspection)
                     <div class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-800">
                         Estimasi baru bisa dibuat setelah teknisi mengisi lembar pemeriksaan.
@@ -413,7 +432,12 @@
                             <i data-lucide="printer" class="h-4 w-4"></i> Cetak / Preview PDF
                         </a>
                         <button type="submit" class="inline-flex items-center gap-2 rounded-xl bg-lime-300 px-5 py-2.5 text-sm font-bold text-black shadow-sm transition hover:bg-lime-400 active:scale-[.98]">
-                            <i data-lucide="send" class="h-4 w-4"></i> Simpan Estimasi &amp; Minta Persetujuan
+                            <i data-lucide="send" class="h-4 w-4"></i>
+                            @if($serviceOrder->status === 'completed')
+                                Simpan Perubahan Estimasi Biaya
+                            @else
+                                Simpan Estimasi &amp; Minta Persetujuan
+                            @endif
                         </button>
                     </div>
                 </form>
@@ -430,6 +454,7 @@
                     {{ $subMaterials->map(fn($s) => $s->name.' (Rp '.number_format($s->default_price).')')->join(' · ') }}
                 </div>
                 @endif
+                </div>
             </div>
         @else
             {{-- Rincian item read-only --}}
@@ -504,9 +529,9 @@
                             <i data-lucide="file-badge" class="h-4 w-4"></i> Tahap 5 — Penerbitan Surat Perintah Kerja (SPK)
                         </h3>
                         <p class="mt-1 text-sm text-sky-800">
-                            Estimasi telah disetujui customer{{ $serviceOrder->estimate_approved_at ? ' pada '.$serviceOrder->estimate_approved_at->format('d M Y H:i') : '' }}.
+                            Estimasi telah disetujui customer{{ $serviceOrder->estimate_approved_at ? ' pada '.$serviceOrder->estimate_approved_at->format('d/m/Y H:i') : '' }}.
                             @if($serviceOrder->spk_number)
-                                SPK No: <b class="font-mono text-sky-950">{{ $serviceOrder->spk_number }}</b> diterbitkan {{ $serviceOrder->spk_issued_at?->format('d M Y H:i') }}. Mekanik dapat memulai pengerjaan (start timer).
+                                SPK No: <b class="font-mono text-sky-950">{{ $serviceOrder->spk_number }}</b> diterbitkan {{ $serviceOrder->spk_issued_at?->format('d/m/Y H:i') }}. Mekanik dapat memulai pengerjaan (start timer).
                             @else
                                 Terbitkan SPK resmi agar teknisi / mekanik dapat memulai pengerjaan servis (start timer).
                             @endif
@@ -557,7 +582,7 @@
                 </h3>
                 @if($serviceOrder->final_check_at)
                     <p class="mt-1 text-sm text-teal-700">
-                        Pemeriksaan akhir SA {{ $serviceOrder->final_check_at->format('d M Y H:i') }}: {{ $serviceOrder->final_check_notes }}
+                        Pemeriksaan akhir SA {{ $serviceOrder->final_check_at->format('d/m/Y H:i') }}: {{ $serviceOrder->final_check_notes }}
                     </p>
                 @endif
                 <p class="mt-1 text-sm text-teal-700">
@@ -582,7 +607,7 @@
                     <i data-lucide="receipt-text" class="h-4 w-4"></i> Tahap 10 — Siap Menerbitkan Invoice
                 </h3>
                 <p class="mt-1 text-sm text-emerald-700">
-                    Hasil pengerjaan disetujui customer{{ $serviceOrder->result_confirmed_at ? ' pada '.$serviceOrder->result_confirmed_at->format('d M Y H:i') : '' }}.
+                    Hasil pengerjaan disetujui customer{{ $serviceOrder->result_confirmed_at ? ' pada '.$serviceOrder->result_confirmed_at->format('d/m/Y H:i') : '' }}.
                     Terbitkan invoice / kwitansi resmi untuk customer.
                 </p>
                 <form method="POST" action="{{ route('sa.invoice', $serviceOrder) }}" class="mt-3">
@@ -628,7 +653,7 @@
 </div>
 
 {{-- Data untuk lembar estimasi --}}
-@if($serviceOrder->inspection && in_array($serviceOrder->status, ['draft', 'inspected', 'waiting_approval']))
+@if($serviceOrder->inspection && in_array($serviceOrder->status, ['draft', 'inspected', 'waiting_approval', 'completed']))
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
 <style>
     .est-ts { width: 100%; }
@@ -800,7 +825,15 @@
         return String(value ?? '').replace(/[&<>"']/g, char => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[char]));
     }
 
+    function toggleEstimateEditor() {
+        const editor = document.getElementById('estimate-editor');
+        editor.classList.toggle('hidden');
+        if (!editor.classList.contains('hidden')) editor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
     function addRow(type, item = {}) {
+        const editor = document.getElementById('estimate-editor');
+        if (editor && editor.classList.contains('hidden')) editor.classList.remove('hidden');
         if (type === 'sub_material' && !item.item_name) item = {...item, item_name: subMaterials[0]?.name};
 
         const idx = body.children.length;

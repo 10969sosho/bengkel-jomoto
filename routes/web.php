@@ -30,6 +30,7 @@ Route::middleware('role:sa')->prefix('sa')->name('sa.')->group(function () {
     Route::post('/wo', [SaController::class, 'store'])->name('store');
     Route::get('/customers', [SaController::class, 'customers'])->name('customers.index');
     Route::post('/customers', [SaController::class, 'storeCustomer'])->name('customers.store');
+    Route::post('/customers/sync-jomoto', [SaController::class, 'syncJomotoCustomers'])->name('customers.syncJomoto');
     Route::get('/customers/{customer}', [SaController::class, 'showCustomer'])->name('customers.show');
     Route::post('/customers/{customer}/vehicles', [SaController::class, 'storeVehicle'])->name('vehicles.store');
     Route::put('/vehicles/{vehicle}', [SaController::class, 'updateVehicle'])->name('vehicles.update');

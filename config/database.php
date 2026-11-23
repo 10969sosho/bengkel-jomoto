@@ -84,6 +84,21 @@ return [
             ]) : [],
         ],
 
+        'jomoto_main' => [
+            'driver' => 'mysql',
+            'host' => env('JOMOTO_DB_HOST', '127.0.0.1'),
+            'port' => env('JOMOTO_DB_PORT', '3306'),
+            'database' => env('JOMOTO_DB_DATABASE', 'alurelab_jomotocenter'),
+            'username' => env('JOMOTO_DB_USERNAME', ''),
+            'password' => env('JOMOTO_DB_PASSWORD', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),

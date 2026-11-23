@@ -111,7 +111,7 @@
                     <div class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Teknisi</div>
                     <div class="mt-0.5 font-semibold text-slate-700">{{ $order->technician?->name ?? 'Belum ditugaskan' }}</div>
                     @if($order->estimated_completion)
-                        <div class="mt-1 text-xs text-slate-400">Target: {{ $order->estimated_completion->format('d M Y H:i') }}</div>
+                        <div class="mt-1 text-xs text-slate-400">Target: {{ $order->estimated_completion->format('d/m/Y H:i') }}</div>
                     @endif
                 </div>
             </div>
@@ -213,7 +213,7 @@
 
                     @if($order->final_check_at)
                         <div class="mt-3 rounded-xl bg-white p-3 text-xs text-slate-600">
-                            <div class="font-bold text-slate-800">Pemeriksaan Akhir SA · {{ $order->final_check_at->format('d M Y H:i') }}</div>
+                            <div class="font-bold text-slate-800">Pemeriksaan Akhir SA · {{ $order->final_check_at->format('d/m/Y H:i') }}</div>
                             <p class="mt-1">{{ $order->final_check_notes }}</p>
                         </div>
                     @endif
@@ -232,7 +232,7 @@
 
             @if($order->status === 'confirmed')
                 <div class="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4 text-sm text-cyan-900">
-                    Hasil pengerjaan sudah dikonfirmasi{{ $order->result_confirmed_at ? ' pada '.$order->result_confirmed_at->format('d M Y H:i') : '' }} — SA akan menerbitkan invoice.
+                    Hasil pengerjaan sudah dikonfirmasi{{ $order->result_confirmed_at ? ' pada '.$order->result_confirmed_at->format('d/m/Y H:i') : '' }} — SA akan menerbitkan invoice.
                     @if($order->result_confirmation_notes)
                         <div class="mt-1 text-xs text-cyan-700">Catatan: {{ $order->result_confirmation_notes }}</div>
                     @endif
@@ -272,7 +272,7 @@
                                 {{ $order->vehicle?->fullName() }} · {{ $order->vehicle?->plate_number }}
                             </td>
                             <td class="px-5 py-3.5 text-slate-600">
-                                {{ optional($order->actual_completion)->format('d M Y') ?? $order->created_at->format('d M Y') }}
+                                {{ optional($order->actual_completion)->format('d/m/Y') ?? $order->created_at->format('d/m/Y') }}
                             </td>
                             <td class="px-5 py-3.5">
                                 <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $order->statusColor() }}">{{ $order->statusLabel() }}</span>

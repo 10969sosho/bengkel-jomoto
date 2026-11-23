@@ -42,10 +42,10 @@ class PrintDocumentTest extends TestCase
         $this->actingAs($sa)
             ->get(route('sa.print.estimate', $order))
             ->assertOk()
-            ->assertSee('Lembar Estimasi Servis')
+            ->assertSee('LEMBAR ESTIMASI BIAYA BENGKEL')
             ->assertSee('Persetujuan Estimasi')
             ->assertSee('Persetujuan Hasil Pengerjaan')
-            ->assertSee('TOTAL ESTIMASI')
+            ->assertSee('TOTAL KESELURUHAN')
             ->assertSee('Rp 94,350')
             ->assertSee('@page', false);
 

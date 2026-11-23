@@ -32,7 +32,7 @@
                 @endif
                 <span>{{ $stage['label'] }}</span>
                 @if(!empty($stage['at']))
-                    <span class="text-[9px] font-mono opacity-70">({{ \Carbon\Carbon::parse($stage['at'])->format('d/m H:i') }})</span>
+                    <span class="text-[9px] font-mono opacity-70">({{ \Carbon\Carbon::parse($stage['at'])->format('d/m/Y H:i') }})</span>
                 @endif
             </li>
         @endforeach

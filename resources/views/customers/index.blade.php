@@ -10,9 +10,17 @@
         <h1 class="text-xl font-bold text-slate-900">Kelola Pelanggan</h1>
         <p class="text-sm text-slate-500">Data customer, kendaraan, dan riwayat servis.</p>
     </div>
-    <button type="button" onclick="document.getElementById('customer-form').classList.toggle('hidden')" class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">
-        <i data-lucide="user-plus" class="h-4 w-4"></i> + Tambah Customer
-    </button>
+    <div class="flex flex-wrap gap-2">
+        <form method="POST" action="{{ route('sa.customers.syncJomoto') }}" onsubmit="return confirm('Sinkronisasi customer dari jomotocenter.com sekarang?')">
+            @csrf
+            <button class="inline-flex items-center gap-2 rounded-xl bg-emerald-500 px-4 py-2.5 text-sm font-bold text-white">
+                <i data-lucide="refresh-cw" class="h-4 w-4"></i> Sinkronisasi Customer Website Jomoto
+            </button>
+        </form>
+        <button type="button" onclick="document.getElementById('customer-form').classList.toggle('hidden')" class="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white">
+            <i data-lucide="user-plus" class="h-4 w-4"></i> + Tambah Customer
+        </button>
+    </div>
 </div>
 
 <form id="customer-form" method="POST" action="{{ route('sa.customers.store') }}" class="mb-5 {{ $errors->any() ? '' : 'hidden' }} rounded-3xl border border-lime-200 bg-white p-5 shadow-sm">

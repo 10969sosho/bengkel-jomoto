@@ -49,7 +49,7 @@
                 <div class="mt-2.5 grid grid-cols-2 gap-2 text-xs text-slate-600 sm:grid-cols-4">
                     <div><span class="text-slate-400">BBM:</span> <b>{{ $order->inspection->fuel_level ?? "—" }}</b></div>
                     <div><span class="text-slate-400">Manager:</span> <b>{{ $order->inspection->manager_name ?? "ARTI DEWI" }}</b></div>
-                    <div><span class="text-slate-400">Tanggal:</span> <b>{{ optional($order->inspection->inspection_date)->format("d M Y") ?? "—" }}</b></div>
+                    <div><span class="text-slate-400">Tanggal:</span> <b>{{ optional($order->inspection->inspection_date)->format('d/m/Y') ?? "—" }}</b></div>
                     <div>
                         <span class="text-slate-400">Status:</span>
                         @if($order->inspection->mechanic_confirmed_at)

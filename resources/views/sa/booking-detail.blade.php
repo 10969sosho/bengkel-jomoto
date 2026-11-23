@@ -11,7 +11,7 @@
     </a>
     <div class="flex flex-wrap items-center gap-2">
         <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">Booking Masuk</span>
-        <span class="font-mono text-xs font-semibold text-slate-400">Dibuat {{ $booking->created_at->format('d M Y H:i') }}</span>
+        <span class="font-mono text-xs font-semibold text-slate-400">Dibuat {{ $booking->created_at->format('d/m/Y H:i') }}</span>
     </div>
 </div>
 

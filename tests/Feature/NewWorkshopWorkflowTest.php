@@ -212,7 +212,7 @@ class NewWorkshopWorkflowTest extends TestCase
         // Printable check-in page
         $this->actingAs($sa)->get(route('sa.print.checkin', $booking))
             ->assertOk()
-            ->assertSee('PEMERIKSAAN AWAL (CHECK-IN)')
+            ->assertSee('LEMBAR PEMERIKSAAN SEPEDA MOTOR SERVICE')
             ->assertSee($booking->inspection->inspection_number)
             ->assertSee('ARTI DEWI')
             ->assertSee('D 5555 JMT');
@@ -261,11 +261,11 @@ class NewWorkshopWorkflowTest extends TestCase
         // Printable estimate page
         $this->actingAs($sa)->get(route('sa.print.estimate', $booking))
             ->assertOk()
-            ->assertSee('Lembar Estimasi Servis')
+            ->assertSee('LEMBAR ESTIMASI BIAYA BENGKEL')
             ->assertSee($booking->estimate_number)
             ->assertSee('Servis CVT')
             ->assertSee('Roller Set PCX')
-            ->assertSee('TOTAL ESTIMASI');
+            ->assertSee('TOTAL KESELURUHAN');
 
         // Stage 4: Customer confirms / approves estimate -> SPK auto generated / available
         $customerApprovalResponse = $this->actingAs($customer)->post(route('customer.orders.approve', $booking));
@@ -289,7 +289,7 @@ class NewWorkshopWorkflowTest extends TestCase
         // Printable SPK page
         $this->actingAs($sa)->get(route('sa.print.spk', $booking))
             ->assertOk()
-            ->assertSee('SURAT PERINTAH KERJA (SPK)')
+            ->assertSee('SURAT ORDER PENJUALAN')
             ->assertSee($booking->spk_number)
             ->assertSee('Servis CVT')
             ->assertSee('Joko Mekanik');

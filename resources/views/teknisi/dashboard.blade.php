@@ -240,7 +240,7 @@
                     <div class="space-y-1">
                         @foreach($pauseLogs as $log)
                             <div class="flex flex-wrap gap-2 text-xs text-amber-900">
-                                <span class="font-mono font-semibold">{{ optional($log->stopped_at)->format('d M H:i') }}</span>
+                                <span class="font-mono font-semibold">{{ optional($log->stopped_at)->format('d/m/Y H:i') }}</span>
                                 <span>{{ $log->pause_reason }}</span>
                             </div>
                         @endforeach
