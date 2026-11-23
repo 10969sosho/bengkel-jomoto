@@ -6,6 +6,7 @@ use App\Models\Inspection;
 use App\Models\Invoice;
 use App\Models\ServiceOrder;
 use App\Models\WorkLog;
+use App\Services\WhatsAppService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -120,6 +121,11 @@ class TeknisiController extends Controller
                         'status' => 'working',
                         'work_start_time' => $serviceOrder->work_start_time ?? now()->format('H:i:s'),
                     ]);
+
+                    app(WhatsAppService::class)->notify(
+                        $serviceOrder,
+                        'Teknisi ('.auth()->user()?->name.') telah mulai mengerjakan servis sepeda motor Anda.'
+                    );
                 }
 
                 return back()->with('success', $resuming ? 'Timer dilanjutkan kembali.' : 'Timer pengerjaan dimulai.');
@@ -182,6 +188,11 @@ class TeknisiController extends Controller
                 'actual_completion' => now(),
             ]);
 
+            app(WhatsAppService::class)->notify(
+                $serviceOrder,
+                'Pengerjaan sepeda motor Anda telah SELESAI oleh teknisi dan sedang dalam pemeriksaan akhir (QC) Sales Adviser.'
+            );
+
             if (! empty($data['odometer'])) {
                 $serviceOrder->vehicle->update(['last_odometer' => $data['odometer']]);
             }
@@ -202,7 +213,6 @@ class TeknisiController extends Controller
             ->with('success', $message);
     }
 
-    
     public function confirmInspection(Request $request, ServiceOrder $serviceOrder): RedirectResponse
     {
         $this->guard($serviceOrder);

@@ -20,6 +20,7 @@ class Vehicle extends Model
         'last_odometer',
         'transmission',
         'engine_type',
+        'engine_cc',
         'serial_number',
     ];
 

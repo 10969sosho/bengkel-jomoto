@@ -9,6 +9,7 @@ use App\Models\ServicePricelist;
 use App\Models\SubMaterialCatalog;
 use App\Models\User;
 use App\Models\Vehicle;
+use App\Services\WhatsAppService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -356,7 +357,12 @@ class SaController extends Controller
             $serviceOrder->update(['status' => 'waiting_approval']);
         }
 
-        return back()->with('success', 'Lembar estimasi biaya tersimpan & menunggu persetujuan customer.');
+        app(WhatsAppService::class)->notify(
+            $serviceOrder,
+            "Lembar estimasi biaya {$serviceOrder->wo_number} sebesar Rp ".number_format($afterDiscount + $tax).' telah disiapkan. Silakan tinjau dan konfirmasi melalui aplikasi.'
+        );
+
+        return back()->with('success', 'Lembar estimasi biaya tersimpan & diperbarui.');
     }
 
     public function approve(ServiceOrder $serviceOrder): RedirectResponse
@@ -423,6 +429,11 @@ class SaController extends Controller
         $invoice = Invoice::createFromOrder($serviceOrder);
         $serviceOrder->update(['status' => 'invoiced']);
 
+        app(WhatsAppService::class)->notify(
+            $serviceOrder,
+            "Invoice {$invoice->invoice_number} sebesar Rp ".number_format($invoice->total_amount).' telah terbit. Silakan lakukan pembayaran di kasir.'
+        );
+
         return redirect()->route('invoices.print', $invoice)
             ->with('success', "Invoice {$invoice->invoice_number} berhasil diterbitkan.");
     }
@@ -485,6 +496,7 @@ class SaController extends Controller
             'vehicle_year' => ['nullable', 'integer', 'min:1950', 'max:'.(now()->year + 1)],
             'vehicle_transmission' => ['nullable', 'string', 'max:50'],
             'vehicle_engine_type' => ['nullable', 'string', 'max:100'],
+            'vehicle_engine_cc' => ['nullable', 'string', 'max:20'],
             'visit_date' => ['nullable', 'date'],
             'plate_number' => ['nullable', 'string', 'max:20'],
             'complaint_category' => ['nullable', 'string', 'max:100'],
@@ -524,6 +536,7 @@ class SaController extends Controller
             'year' => $data['vehicle_year'] ?? null,
             'transmission' => $data['vehicle_transmission'] ?? null,
             'engine_type' => $data['vehicle_engine_type'] ?? null,
+            'engine_cc' => $data['vehicle_engine_cc'] ?? null,
             'plate_number' => $data['plate_number'] ?? null,
         ]);
         if (! empty($vehicleUpdate)) {

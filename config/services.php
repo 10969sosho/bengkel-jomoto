@@ -40,4 +40,9 @@ return [
         'demo_key' => env('API_DEMO_KEY', 'demo-erp-jomoto-token'),
     ],
 
+    'whatsapp' => [
+        'endpoint' => env('WHATSAPP_ENDPOINT', 'http://localhost:3300/send'),
+        'enabled' => env('WHATSAPP_ENABLED', true),
+    ],
+
 ];

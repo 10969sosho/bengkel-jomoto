@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 
 class ServiceOrder extends Model
@@ -19,6 +20,8 @@ class ServiceOrder extends Model
         'customer_complaint',
         'complaint_category',
         'visit_date',
+        'booking_date',
+        'need_tax_invoice',
         'requested_services',
         'inspection_checklist',
         'stnk_photo',
@@ -61,6 +64,8 @@ class ServiceOrder extends Model
             'coupon_milestone' => 'integer',
             'spk_issued_at' => 'datetime',
             'visit_date' => 'date',
+            'booking_date' => 'date',
+            'need_tax_invoice' => 'boolean',
             'estimate_discount' => 'decimal:2',
             'estimate_tax' => 'decimal:2',
         ];
@@ -213,18 +218,20 @@ class ServiceOrder extends Model
     /**
      * Posisi WO pada alur servis 12 tahap.
      *
-     * @return array<int, array{no: int, label: string, done: bool}>
+     * @return array<int, array{no: int, label: string, done: bool, at: Carbon|null}>
      */
     public function flowStages(): array
     {
-        $inspectionExists = $this->inspection !== null;
+        $inspection = $this->inspection;
         $invoice = $this->invoice;
+        $firstWorkLog = $this->workLogs->sortBy('started_at')->first();
+        $firstItem = $this->items->first();
 
         $done = [
             1 => true,
             2 => $this->sa_id !== null,
-            3 => $inspectionExists,
-            4 => $inspectionExists && $this->sa_id !== null,
+            3 => $inspection !== null,
+            4 => $inspection !== null && $this->sa_id !== null,
             5 => $this->items->isNotEmpty(),
             6 => $this->estimate_approved_at !== null || in_array($this->status, self::APPROVED_STATUSES, true),
             7 => $this->workLogs->isNotEmpty() || in_array($this->status, self::WORKED_STATUSES, true),
@@ -235,11 +242,27 @@ class ServiceOrder extends Model
             12 => $invoice?->isPaid() === true,
         ];
 
+        $at = [
+            1 => $this->created_at,
+            2 => $inspection?->created_at,
+            3 => $inspection?->mechanic_confirmed_at ?? $inspection?->created_at,
+            4 => $inspection?->mechanic_confirmed_at ?? $inspection?->created_at,
+            5 => $firstItem?->created_at,
+            6 => $this->estimate_approved_at,
+            7 => $firstWorkLog?->started_at,
+            8 => $this->final_check_at,
+            9 => $this->result_confirmed_at,
+            10 => $invoice?->created_at,
+            11 => $invoice?->paid_at,
+            12 => $invoice?->paid_at,
+        ];
+
         return collect(self::FLOW_STAGES)
             ->map(fn (string $label, int $index): array => [
                 'no' => $index + 1,
                 'label' => $label,
                 'done' => (bool) ($done[$index + 1] ?? false),
+                'at' => ($done[$index + 1] ?? false) ? ($at[$index + 1] ?? null) : null,
             ])
             ->values()
             ->all();

@@ -238,12 +238,21 @@
                 </select>
             </div>
 
-            {{-- Jenis Mesin --}}
+            {{-- Jenis Mesin & CC --}}
             <div>
                 <label class="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">Jenis Mesin *</label>
                 <input type="text" name="vehicle_engine_type" id="vehicle_engine_type" required
                        value="{{ old('vehicle_engine_type', $booking?->vehicle?->engine_type ?: ($booking?->vehicle?->fuel_type === 'electric' ? 'Listrik BLDC / PMSM' : 'Bensin 4-Tak')) }}"
                        placeholder="Contoh: Bensin 4-Tak SOHC / Listrik BLDC"
+                       class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none transition focus:border-lime-400 focus:bg-white">
+            </div>
+
+            {{-- Kapasitas Mesin (CC) --}}
+            <div>
+                <label class="mb-1 block text-xs font-bold uppercase tracking-wide text-slate-600">Kapasitas Mesin (CC)</label>
+                <input type="text" name="vehicle_engine_cc" id="vehicle_engine_cc"
+                       value="{{ old('vehicle_engine_cc', $booking?->vehicle?->engine_cc) }}"
+                       placeholder="Contoh: 125, 150, 250"
                        class="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm outline-none transition focus:border-lime-400 focus:bg-white">
             </div>
 
@@ -299,17 +308,31 @@
         <div class="mt-4 grid gap-4 border-t border-slate-100 pt-4 sm:grid-cols-2">
             <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-3.5">
                 <label class="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-600">
-                    <i data-lucide="camera" class="inline h-3.5 w-3.5"></i> Foto Odometer Masuk
+                    <i data-lucide="camera" class="inline h-3.5 w-3.5 text-indigo-600"></i> Foto Odometer Masuk
                 </label>
-                <input type="file" name="odometer_photo" accept="image/*"
-                       class="w-full text-xs text-slate-500 file:mr-2 file:rounded-xl file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white">
+                <div class="flex items-center gap-2">
+                    <input type="file" name="odometer_photo" id="odo-file" accept="image/*"
+                           class="w-full text-xs text-slate-500 file:mr-2 file:rounded-xl file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white">
+                    <input type="file" name="odometer_photo" id="odo-camera" accept="image/*" capture="environment" class="hidden" onchange="document.getElementById('odo-file').files = this.files;">
+                    <button type="button" onclick="document.getElementById('odo-camera').click()"
+                            class="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-700 shadow-sm transition hover:bg-slate-100">
+                        <i data-lucide="camera" class="h-3.5 w-3.5 text-indigo-600"></i> Kamera
+                    </button>
+                </div>
             </div>
             <div class="rounded-2xl border border-slate-200 bg-slate-50/50 p-3.5">
                 <label class="mb-1.5 block text-xs font-bold uppercase tracking-wide text-slate-600">
-                    <i data-lucide="fuel" class="inline h-3.5 w-3.5"></i> Foto Indikator Bahan Bakar / Baterai
+                    <i data-lucide="fuel" class="inline h-3.5 w-3.5 text-amber-600"></i> Foto Indikator Bahan Bakar / Baterai
                 </label>
-                <input type="file" name="fuel_photo" accept="image/*"
-                       class="w-full text-xs text-slate-500 file:mr-2 file:rounded-xl file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white">
+                <div class="flex items-center gap-2">
+                    <input type="file" name="fuel_photo" id="fuel-file" accept="image/*"
+                           class="w-full text-xs text-slate-500 file:mr-2 file:rounded-xl file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-white">
+                    <input type="file" name="fuel_photo" id="fuel-camera" accept="image/*" capture="environment" class="hidden" onchange="document.getElementById('fuel-file').files = this.files;">
+                    <button type="button" onclick="document.getElementById('fuel-camera').click()"
+                            class="inline-flex shrink-0 items-center gap-1 rounded-xl border border-slate-300 bg-white px-2.5 py-1.5 text-[11px] font-bold text-slate-700 shadow-sm transition hover:bg-slate-100">
+                        <i data-lucide="camera" class="h-3.5 w-3.5 text-indigo-600"></i> Kamera
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -406,10 +429,17 @@
                     <label class="block text-xs font-bold uppercase tracking-wide text-slate-700">
                         <i data-lucide="images" class="inline h-4 w-4 mr-1 text-indigo-600"></i> Masukkan Foto Kondisi Eksterior / Kerusakan Kendaraan
                     </label>
-                    <p class="text-xs text-slate-500">Dapat mengunggah beberapa foto sekaligus (bodi depan, belakang, samping, atau bagian yang baret/penyok).</p>
+                    <p class="text-xs text-slate-500">Pilih dari galeri atau ambil langsung dengan kamera (bodi depan, belakang, samping, baret/penyok).</p>
                 </div>
-                <input type="file" name="exterior_photos[]" multiple accept="image/*"
-                       class="text-xs text-slate-500 file:mr-2 file:rounded-xl file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-lime-300">
+                <div class="flex items-center gap-2">
+                    <input type="file" name="exterior_photos[]" id="ext-photos-file" multiple accept="image/*"
+                           class="text-xs text-slate-500 file:mr-2 file:rounded-xl file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-lime-300">
+                    <input type="file" name="exterior_photos[]" id="ext-photos-cam" accept="image/*" capture="environment" class="hidden" onchange="document.getElementById('ext-photos-file').files = this.files;">
+                    <button type="button" onclick="document.getElementById('ext-photos-cam').click()"
+                            class="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-100">
+                        <i data-lucide="camera" class="h-3.5 w-3.5 text-indigo-600"></i> Kamera
+                    </button>
+                </div>
             </div>
         </div>
 

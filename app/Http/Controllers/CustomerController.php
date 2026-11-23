@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\ServiceOrder;
 use App\Models\ServicePricelist;
+use App\Services\WhatsAppService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -66,6 +67,7 @@ class CustomerController extends Controller
             'plate_number' => ['required', 'string', 'max:20', Rule::unique('vehicles', 'plate_number')],
             'engine_number' => ['nullable', 'string', 'max:100'],
             'chassis_number' => ['nullable', 'string', 'max:100'],
+            'engine_cc' => ['nullable', 'string', 'max:20'],
             'fuel_type' => ['required', 'in:electric,gasoline'],
             'last_odometer' => ['required', 'integer', 'min:0'],
         ]);
@@ -75,12 +77,14 @@ class CustomerController extends Controller
         return back()->with('success', 'Kendaraan berhasil didaftarkan.');
     }
 
-    public function storeOrder(Request $request): RedirectResponse
+    public function storeOrder(Request $request, WhatsAppService $whatsapp): RedirectResponse
     {
         $data = $request->validate([
             'vehicle_id' => ['required', Rule::exists('vehicles', 'id')->where('user_id', $request->user()->id)],
             'customer_complaint' => ['required', 'string', 'max:2000'],
             'odometer' => ['required', 'integer', 'min:0'],
+            'booking_date' => ['nullable', 'date', 'after_or_equal:today'],
+            'need_tax_invoice' => ['nullable', 'boolean'],
             'location_type' => ['required', 'in:onsite,offsite'],
             'offsite_address' => ['required_if:location_type,offsite', 'nullable', 'string', 'max:1000'],
             'location_notes' => ['nullable', 'string', 'max:255'],
@@ -102,6 +106,8 @@ class CustomerController extends Controller
             'requested_services' => array_values($data['requested_services']),
             'stnk_photo' => $request->file('stnk_photo')->store('stnk', 'public'),
             'odometer' => $data['odometer'],
+            'booking_date' => $data['booking_date'] ?? null,
+            'need_tax_invoice' => (bool) ($data['need_tax_invoice'] ?? false),
             'service_type' => $coupon['service_type'] ?? ($offsite ? 'home_service' : 'regular'),
             'coupon_milestone' => $coupon['milestone'] ?? null,
             'location_type' => $data['location_type'],
@@ -111,10 +117,12 @@ class CustomerController extends Controller
             'status' => 'draft',
         ]);
 
+        $whatsapp->notify($order, "Halo {$order->customer?->name}! Booking servis Anda sudah kami terima dan sedang diproses Sales Adviser.");
+
         return redirect()->route('customer.index')->with('success', "Booking {$order->wo_number} berhasil dikirim ke Sales Adviser.");
     }
 
-    public function approveEstimate(Request $request, ServiceOrder $serviceOrder): RedirectResponse
+    public function approveEstimate(Request $request, ServiceOrder $serviceOrder, WhatsAppService $whatsapp): RedirectResponse
     {
         $this->guard($request, $serviceOrder);
 
@@ -130,7 +138,22 @@ class CustomerController extends Controller
             'spk_issued_at' => $serviceOrder->spk_issued_at ?? now(),
         ]);
 
+        $whatsapp->notify($serviceOrder, "Terima kasih, estimasi disetujui. Surat Perintah Kerja (SPK) No: {$spkNumber} telah diterbitkan dan teknisi segera mengerjakan kendaraan Anda.");
+
         return back()->with('success', "Estimasi {$serviceOrder->wo_number} disetujui. Surat Perintah Kerja (SPK) No: {$spkNumber} telah diterbitkan dan teknisi mulai mengerjakan.");
+    }
+
+    /** Halaman detail lembar estimasi biaya (preview resmi) untuk customer pemilik WO. */
+    public function showEstimate(Request $request, ServiceOrder $serviceOrder): View
+    {
+        $this->guard($request, $serviceOrder);
+
+        $serviceOrder->load(['customer', 'vehicle', 'technician', 'sa', 'items', 'inspection']);
+
+        return view('sa.print-estimate', [
+            'serviceOrder' => $serviceOrder,
+            'requestedServices' => $serviceOrder->requestedServiceLabels(ServicePricelist::pluck('service_name', 'id')->all()),
+        ]);
     }
 
     public function confirmResult(Request $request, ServiceOrder $serviceOrder): RedirectResponse

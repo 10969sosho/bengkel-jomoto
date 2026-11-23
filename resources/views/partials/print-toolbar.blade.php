@@ -51,9 +51,13 @@
             <a href="{{ url()->previous() }}" class="rounded-xl bg-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-300">
                 ← Kembali
             </a>
+            <button type="button" onclick="window.print()"
+                    class="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-lime-300 shadow-sm transition hover:bg-slate-800">
+                📥 Download / Simpan PDF
+            </button>
             <button type="button" id="paper-print"
                     class="rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700">
-                🖨 Cetak / Simpan PDF
+                🖨 Cetak Dokumen
             </button>
         </div>
     </div>

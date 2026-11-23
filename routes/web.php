@@ -67,6 +67,7 @@ Route::middleware('role:customer')->prefix('customer')->name('customer.')->group
     Route::get('/booking/create', [CustomerController::class, 'createBooking'])->name('booking.create');
     Route::post('/vehicles', [CustomerController::class, 'storeVehicle'])->name('vehicles.store');
     Route::post('/service-orders', [CustomerController::class, 'storeOrder'])->name('orders.store');
+    Route::get('/service-orders/{serviceOrder}/estimate', [CustomerController::class, 'showEstimate'])->name('orders.estimate');
     Route::post('/service-orders/{serviceOrder}/approve', [CustomerController::class, 'approveEstimate'])->name('orders.approve');
     Route::post('/service-orders/{serviceOrder}/confirm', [CustomerController::class, 'confirmResult'])->name('orders.confirm');
 });

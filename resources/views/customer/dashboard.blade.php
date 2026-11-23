@@ -186,12 +186,18 @@
                         </table>
                     </div>
 
-                    <form method="POST" action="{{ route('customer.orders.approve', $order) }}" class="mt-3">
-                        @csrf
-                        <button class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[.98]">
-                            <i data-lucide="check-check" class="h-4 w-4"></i> Setujui Estimasi &amp; Biaya
-                        </button>
-                    </form>
+                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                        <a href="{{ route('customer.orders.estimate', $order) }}" target="_blank"
+                           class="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 active:scale-[.98]">
+                            <i data-lucide="file-text" class="h-4 w-4 text-slate-500"></i> Lihat Detail Lembar Estimasi Biaya
+                        </a>
+                        <form method="POST" action="{{ route('customer.orders.approve', $order) }}">
+                            @csrf
+                            <button class="inline-flex items-center gap-2 rounded-xl bg-amber-500 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-amber-600 active:scale-[.98]">
+                                <i data-lucide="check-check" class="h-4 w-4"></i> Setujui Estimasi &amp; Biaya
+                            </button>
+                        </form>
+                    </div>
                 </div>
             @endif
 

@@ -50,13 +50,41 @@
                            class="w-full rounded-2xl border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">
                 </div>
 
-                <div class="sm:col-span-2">
+                <div>
+                    <label class="mb-1.5 block text-sm font-semibold text-slate-700">Tanggal Booking Servis <span class="text-red-500">*</span></label>
+                    <input type="date" name="booking_date" id="booking-date" required
+                           min="{{ date('Y-m-d') }}" value="{{ old('booking_date', date('Y-m-d')) }}"
+                           class="w-full rounded-2xl border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">
+                    <p class="mt-1 text-[11px] text-slate-400">Tentukan jadwal servis yang diinginkan (bisa hari ini atau hari berikutnya).</p>
+                </div>
+
+                <div>
                     <label class="mb-1.5 block text-sm font-semibold text-slate-700">Lokasi Service</label>
                     <select name="location_type" id="booking-location"
                             class="w-full cursor-pointer rounded-2xl border-slate-200 bg-slate-50 px-3.5 py-3 text-sm outline-none transition focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">
                         <option value="onsite" @selected(old('location_type', 'onsite') === 'onsite')>Service di Bengkel</option>
                         <option value="offsite" @selected(old('location_type') === 'offsite')>Service Panggilan (Home Service)</option>
                     </select>
+                </div>
+
+                <div class="sm:col-span-2 rounded-2xl border border-slate-200/80 bg-slate-50 p-4">
+                    <label class="mb-1.5 block text-sm font-semibold text-slate-700">Kebutuhan Faktur Pajak <span class="text-red-500">*</span></label>
+                    <div class="grid gap-3 sm:grid-cols-2">
+                        <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold text-slate-700 transition hover:border-lime-400 has-[:checked]:border-lime-500 has-[:checked]:bg-lime-50/50">
+                            <input type="radio" name="need_tax_invoice" value="0" @checked(old('need_tax_invoice', '0') === '0') class="h-4 w-4 text-lime-500 focus:ring-lime-400">
+                            <div>
+                                <span class="block text-slate-900 font-bold">Tidak Menggunakan Faktur Pajak</span>
+                                <span class="text-[11px] text-slate-400 font-normal">Kuitansi / invoice standar bengkel</span>
+                            </div>
+                        </label>
+                        <label class="flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3 text-xs font-semibold text-slate-700 transition hover:border-lime-400 has-[:checked]:border-lime-500 has-[:checked]:bg-lime-50/50">
+                            <input type="radio" name="need_tax_invoice" value="1" @checked(old('need_tax_invoice') === '1') class="h-4 w-4 text-lime-500 focus:ring-lime-400">
+                            <div>
+                                <span class="block text-slate-900 font-bold">Menggunakan Faktur Pajak</span>
+                                <span class="text-[11px] text-slate-400 font-normal">Faktur pajak PPN untuk pembukuan / perusahaan</span>
+                            </div>
+                        </label>
+                    </div>
                 </div>
 
                 <div id="booking-coupon" class="hidden rounded-2xl border border-lime-200 bg-lime-50 p-3 text-sm font-bold text-lime-800 sm:col-span-2"></div>
@@ -116,9 +144,16 @@
                 <label class="mb-1.5 block text-sm font-semibold text-slate-700">
                     Foto STNK Kendaraan <span class="text-red-500">*</span>
                 </label>
-                <input type="file" name="stnk_photo" accept="image/png,image/jpeg,image/webp" required
-                       class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-lime-300">
-                <p class="mt-1 text-[11px] text-slate-400">Format JPG/PNG/WEBP, maksimal 5 MB. Data pendukung untuk diproses Sales Adviser.</p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input type="file" name="stnk_photo" accept="image/*" capture="environment" id="stnk-camera-input" class="hidden" onchange="document.getElementById('stnk-file-input').files = this.files; updatePhotoLabel(this);">
+                    <input type="file" name="stnk_photo" accept="image/png,image/jpeg,image/webp" id="stnk-file-input" required
+                           class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-900 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-lime-300">
+                    <button type="button" onclick="document.getElementById('stnk-camera-input').click()"
+                            class="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-100">
+                        <i data-lucide="camera" class="h-4 w-4 text-indigo-600"></i> Ambil Foto Kamera
+                    </button>
+                </div>
+                <p class="mt-1 text-[11px] text-slate-400">Pilih dari galeri atau klik "Ambil Foto Kamera" langsung dari HP. Format JPG/PNG/WEBP, maks 5 MB.</p>
                 @error('stnk_photo')
                     <p class="mt-1 text-xs font-semibold text-red-500">{{ $message }}</p>
                 @enderror

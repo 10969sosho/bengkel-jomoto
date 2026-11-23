@@ -31,7 +31,9 @@
                         </span>
                     </div>
                     <div class="mt-2.5 font-bold text-slate-900">{{ $vehicle->fullName() }}</div>
-                    <div class="mt-1 text-xs text-slate-500">Tahun {{ $vehicle->year }} · {{ number_format($vehicle->last_odometer) }} KM</div>
+                    <div class="mt-1 text-xs text-slate-500">
+                        Tahun {{ $vehicle->year }} @if($vehicle->engine_cc)· {{ $vehicle->engine_cc }} CC @endif· {{ number_format($vehicle->last_odometer) }} KM
+                    </div>
                     @if($vehicle->engine_number || $vehicle->chassis_number)
                         <div class="mt-2 space-y-0.5 text-[11px] text-slate-400">
                             @if($vehicle->engine_number)<div>No. Mesin: {{ $vehicle->engine_number }}</div>@endif
@@ -67,6 +69,8 @@
                 <input name="engine_number" placeholder="Nomor mesin" value="{{ old('engine_number') }}"
                        class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">
                 <input name="chassis_number" placeholder="Nomor rangka" value="{{ old('chassis_number') }}"
+                       class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">
+                <input name="engine_cc" placeholder="Kapasitas Mesin (CC), cth: 150" value="{{ old('engine_cc') }}"
                        class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-lime-400 focus:bg-white focus:ring-2 focus:ring-lime-200">
                 <select name="fuel_type" required class="rounded-xl border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
                     <option value="gasoline" @selected(old('fuel_type') === 'gasoline')>Bensin</option>
