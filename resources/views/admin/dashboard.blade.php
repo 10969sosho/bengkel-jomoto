@@ -80,7 +80,7 @@
                                         <div class="font-semibold text-slate-800">{{ $order->customer?->name }}</div>
                                         <div class="text-xs text-slate-400">{{ $order->vehicle?->plate_number }} · {{ $order->vehicle?->fullName() }}</div>
                                     </td>
-                                    <td class="px-5 py-3.5 text-slate-600">{{ $order->technician?->name ?? — }}</td>
+                                    <td class="px-5 py-3.5 text-slate-600">{{ $order->technician?->name ?? '—' }}</td>
                                     <td class="px-5 py-3.5">
                                         <span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $order->statusColor() }}">{{ $order->statusLabel() }}</span>
                                     </td>
