@@ -34,14 +34,9 @@
 <div class="print-card mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-10">
 
     {{-- Header --}}
-    <div class="flex flex-wrap items-start justify-between gap-4 border-b-2 border-slate-900 pb-5">
-        <div class="flex items-center gap-3">
-            <span class="grid h-12 w-12 place-items-center rounded-xl bg-indigo-600 text-xl font-bold text-white">J</span>
-            <div>
-                <div class="text-lg font-black tracking-tight text-slate-900">BENGKEL JOMOTO CENTER</div>
-                <div class="text-xs text-slate-500">Jl. Raya Contoh No. 88, Surabaya · Telp 031-555-0188</div>
-                <div class="text-xs text-slate-500">bengkel.solusisurabaya.com</div>
-            </div>
+    <div class="flex flex-wrap items-center justify-between gap-4 border-b-2 border-slate-900 pb-4">
+        <div>
+            <img src="{{ asset('images/kop-jomoto.jpg') }}" alt="CV. JOWIMAR MANDIRI MAKMUR" class="h-16 w-auto object-contain">
         </div>
         <div class="text-right">
             <div class="text-xs font-bold uppercase tracking-widest text-slate-400">Invoice / Kwitansi</div>

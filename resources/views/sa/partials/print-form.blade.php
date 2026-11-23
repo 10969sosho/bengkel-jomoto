@@ -109,14 +109,14 @@
 
 <div class="form no-print-hide">
 
-    {{-- Baris 1: Logo kiri + PIHAK PELANGGAN kanan --}}
+    {{-- Baris 1: Kop CV. JOWIMAR MANDIRI MAKMUR (kiri) + PIHAK PELANGGAN (kanan) --}}
     <table>
         <tr>
-            <td style="width: 55%; padding: 6px 8px;">
-                <span class="brand-logo">J</span>
-                <div class="brand-name">JOMOTO CENTER</div>
-                <div class="brand-sub">KAPASARI 73, SURABAYA</div>
-                <div class="brand-sub">628123416281</div>
+            <td style="width: 55%; padding: 4px 6px; vertical-align: middle;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <img src="{{ asset('images/kop-jomoto.jpg') }}" alt="KOP CV. JOWIMAR MANDIRI MAKMUR"
+                         style="max-height: 58px; width: auto; object-fit: contain; display: block;">
+                </div>
             </td>
             <td style="width: 45%; padding: 0;">
                 <table>
