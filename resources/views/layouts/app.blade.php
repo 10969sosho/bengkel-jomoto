@@ -85,6 +85,7 @@
                 ['text' => 'Dashboard', 'route' => 'admin.index', 'icon' => 'layout-dashboard'],
             ]],
             ['label' => 'MASTER & KATALOG', 'items' => [
+                ['text' => 'Kelola User & Role', 'route' => 'admin.users', 'icon' => 'user-cog'],
                 ['text' => 'Pricelist Jasa', 'route' => 'admin.pricelist', 'icon' => 'tags'],
                 ['text' => 'Sub Material', 'route' => 'admin.subMaterials', 'icon' => 'package'],
                 ['text' => 'Performa Teknisi', 'route' => 'admin.index', 'anchor' => 'performa', 'icon' => 'chart-no-axes-column-increasing'],

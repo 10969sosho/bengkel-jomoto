@@ -85,6 +85,11 @@ Route::middleware('role:admin')->prefix('admin')->name('admin.')->group(function
     Route::put('/sub-materials/{subMaterial}', [AdminController::class, 'updateSubMaterial'])->name('subMaterials.update');
     Route::delete('/sub-materials/{subMaterial}', [AdminController::class, 'destroySubMaterial'])->name('subMaterials.destroy');
 
+    Route::get('/users', [AdminController::class, 'users'])->name('users');
+    Route::post('/users', [AdminController::class, 'storeUser'])->name('users.store');
+    Route::put('/users/{user}', [AdminController::class, 'updateUser'])->name('users.update');
+    Route::delete('/users/{user}', [AdminController::class, 'destroyUser'])->name('users.destroy');
+
     Route::get('/reports', [AdminController::class, 'reports'])->name('reports');
 });
 

@@ -227,4 +227,96 @@ class AdminController extends Controller
 
         return redirect()->route('admin.subMaterials')->with('success', "Sub-material {$name} berhasil dihapus.");
     }
+
+    public function users(Request $request): View
+    {
+        $role = $request->query('role', 'all');
+        $search = trim((string) $request->query('q', ''));
+
+        $roles = [
+            'admin' => 'Admin / Supervisor',
+            'sa' => 'Sales Adviser',
+            'teknisi' => 'Teknisi / Mekanik',
+            'customer' => 'Customer / Pelanggan',
+        ];
+
+        $users = User::query()
+            ->when($role !== 'all', fn ($query) => $query->where('role', $role))
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('phone', 'like', "%{$search}%");
+                });
+            })
+            ->withCount(['customerOrders', 'technicianOrders', 'saOrders', 'vehicles'])
+            ->orderBy('role')
+            ->orderBy('name')
+            ->paginate(20)
+            ->withQueryString();
+
+        $roleCounts = User::selectRaw('role, count(*) as total')
+            ->groupBy('role')
+            ->pluck('total', 'role')
+            ->all();
+
+        return view('admin.users', compact('users', 'roles', 'role', 'search', 'roleCounts'));
+    }
+
+    public function storeUser(Request $request)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'address' => ['nullable', 'string', 'max:1000'],
+            'role' => ['required', 'in:admin,sa,teknisi,customer'],
+            'password' => ['required', 'string', 'min:6'],
+        ]);
+
+        $data['password'] = bcrypt($data['password']);
+
+        User::create($data);
+
+        return redirect()->route('admin.users')->with('success', "User {$data['name']} dengan role {$data['role']} berhasil ditambahkan.");
+    }
+
+    public function updateUser(Request $request, User $user)
+    {
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users,email,'.$user->id],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'address' => ['nullable', 'string', 'max:1000'],
+            'role' => ['required', 'in:admin,sa,teknisi,customer'],
+            'password' => ['nullable', 'string', 'min:6'],
+        ]);
+
+        if (filled($data['password'] ?? null)) {
+            $data['password'] = bcrypt($data['password']);
+        } else {
+            unset($data['password']);
+        }
+
+        // Prevent admin from accidentally demoting themselves if they are the logged in admin
+        if ($user->id === auth()->id() && $data['role'] !== 'admin') {
+            return back()->withErrors(['role' => 'Anda tidak dapat mengubah role akun admin Anda sendiri saat sedang login.']);
+        }
+
+        $user->update($data);
+
+        return redirect()->route('admin.users')->with('success', "Data dan role user {$user->name} berhasil diperbarui.");
+    }
+
+    public function destroyUser(User $user)
+    {
+        if ($user->id === auth()->id()) {
+            return back()->withErrors(['error' => 'Anda tidak dapat menghapus akun Anda sendiri saat sedang login.']);
+        }
+
+        $name = $user->name;
+        $user->delete();
+
+        return redirect()->route('admin.users')->with('success', "User {$name} berhasil dihapus.");
+    }
 }
